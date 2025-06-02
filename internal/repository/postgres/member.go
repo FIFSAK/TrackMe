@@ -10,8 +10,8 @@ import (
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
 
-	"library-service/internal/domain/member"
-	"library-service/pkg/store"
+	"TrackMe/internal/domain/member"
+	"TrackMe/pkg/store"
 )
 
 type MemberRepository struct {

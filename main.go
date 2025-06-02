@@ -1,7 +1,7 @@
 package main
 
 import (
-	"library-service/internal/app"
+	"TrackMe/internal/app"
 )
 
 func main() {

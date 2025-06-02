@@ -9,8 +9,8 @@ import (
 
 	"github.com/jmoiron/sqlx"
 
-	"library-service/internal/domain/author"
-	"library-service/pkg/store"
+	"TrackMe/internal/domain/client"
+	"TrackMe/pkg/store"
 )
 
 // AuthorRepository handles CRUD operations for authors in a PostgreSQL database.
@@ -24,15 +24,15 @@ func NewAuthorRepository(db *sqlx.DB) *AuthorRepository {
 }
 
 // List retrieves all authors from the database.
-func (r *AuthorRepository) List(ctx context.Context) ([]author.Entity, error) {
+func (r *AuthorRepository) List(ctx context.Context) ([]client.Entity, error) {
 	query := `SELECT id, full_name, pseudonym, specialty FROM authors ORDER BY id`
-	var authors []author.Entity
+	var authors []client.Entity
 	err := r.db.SelectContext(ctx, &authors, query)
 	return authors, err
 }
 
-// Add inserts a new author into the database.
-func (r *AuthorRepository) Add(ctx context.Context, data author.Entity) (string, error) {
+// Add inserts a new client into the database.
+func (r *AuthorRepository) Add(ctx context.Context, data client.Entity) (string, error) {
 	query := `INSERT INTO authors (full_name, pseudonym, specialty) VALUES ($1, $2, $3) RETURNING id`
 	args := []interface{}{data.FullName, data.Pseudonym, data.Specialty}
 	var id string
@@ -43,10 +43,10 @@ func (r *AuthorRepository) Add(ctx context.Context, data author.Entity) (string,
 	return id, err
 }
 
-// Get retrieves an author by ID from the database.
-func (r *AuthorRepository) Get(ctx context.Context, id string) (author.Entity, error) {
+// Get retrieves an client by ID from the database.
+func (r *AuthorRepository) Get(ctx context.Context, id string) (client.Entity, error) {
 	query := `SELECT id, full_name, pseudonym, specialty FROM authors WHERE id=$1`
-	var author author.Entity
+	var author client.Entity
 	err := r.db.GetContext(ctx, &author, query, id)
 	if err != nil && errors.Is(err, sql.ErrNoRows) {
 		return author, store.ErrorNotFound
@@ -54,8 +54,8 @@ func (r *AuthorRepository) Get(ctx context.Context, id string) (author.Entity, e
 	return author, err
 }
 
-// Update modifies an existing author in the database.
-func (r *AuthorRepository) Update(ctx context.Context, id string, data author.Entity) error {
+// Update modifies an existing client in the database.
+func (r *AuthorRepository) Update(ctx context.Context, id string, data client.Entity) error {
 	sets, args := r.prepareArgs(data)
 	if len(args) == 0 {
 		return nil
@@ -69,7 +69,7 @@ func (r *AuthorRepository) Update(ctx context.Context, id string, data author.En
 	return err
 }
 
-// Delete removes an author by ID from the database.
+// Delete removes an client by ID from the database.
 func (r *AuthorRepository) Delete(ctx context.Context, id string) error {
 	query := `DELETE FROM authors WHERE id=$1 RETURNING id`
 	err := r.db.QueryRowContext(ctx, query, id).Scan(&id)
@@ -80,7 +80,7 @@ func (r *AuthorRepository) Delete(ctx context.Context, id string) error {
 }
 
 // prepareArgs prepares the update arguments for the SQL query.
-func (r *AuthorRepository) prepareArgs(data author.Entity) ([]string, []interface{}) {
+func (r *AuthorRepository) prepareArgs(data client.Entity) ([]string, []interface{}) {
 	var sets []string
 	var args []interface{}
 

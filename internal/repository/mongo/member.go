@@ -1,15 +1,15 @@
 package mongo
 
 import (
+	"TrackMe/internal/domain/member"
 	"context"
 	"errors"
-	"library-service/internal/domain/member"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 
-	"library-service/pkg/store"
+	"TrackMe/pkg/store"
 )
 
 // MemberRepository handles CRUD operations for members in MongoDB.

@@ -8,8 +8,8 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 
-	"library-service/internal/domain/book"
-	"library-service/pkg/store"
+	"TrackMe/internal/domain/book"
+	"TrackMe/pkg/store"
 )
 
 // BookRepository handles CRUD operations for books in a MongoDB database.

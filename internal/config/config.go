@@ -14,15 +14,11 @@ const (
 	defaultAppPort    = "8080"
 	defaultAppPath    = "/"
 	defaultAppTimeout = 60 * time.Second
-
-	defaultTokenSalt    = "IP03O5Ekg91g5jw=="
-	defaultTokenExpires = 3600 * time.Second
 )
 
 type (
 	Configs struct {
 		APP      AppConfig
-		TOKEN    TokenConfig
 		CURRENCY ClientConfig
 		POSTGRES StoreConfig
 	}
@@ -32,11 +28,6 @@ type (
 		Port    string
 		Path    string
 		Timeout time.Duration
-	}
-
-	TokenConfig struct {
-		Salt    string
-		Expires time.Duration
 	}
 
 	ClientConfig struct {
@@ -64,11 +55,6 @@ func New() (cfg Configs, err error) {
 		Port:    defaultAppPort,
 		Path:    defaultAppPath,
 		Timeout: defaultAppTimeout,
-	}
-
-	cfg.TOKEN = TokenConfig{
-		Salt:    defaultTokenSalt,
-		Expires: defaultTokenExpires,
 	}
 
 	if err = envconfig.Process("APP", &cfg.APP); err != nil {

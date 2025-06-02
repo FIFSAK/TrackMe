@@ -10,7 +10,7 @@ import (
 	//_ "github.com/sijms/go-ora/v2"
 )
 
-// postgres://username:password@localhost:5432/dbname?sslmode=disable&search_path=public
+// mongo://username:password@localhost:5432/dbname?sslmode=disable&search_path=public
 // oracle://username:password@:0/?connstr=(description=(address=(protocol=tcp)(host=localhost)(port=1521))(connect_data=(server=dedicated)(sid=dbname)))&persist security info=true&ssl=enable&ssl verify=false
 
 type SQLX struct {

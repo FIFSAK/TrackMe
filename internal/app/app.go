@@ -12,17 +12,17 @@ import (
 
 	"go.uber.org/zap"
 
-	"library-service/internal/cache"
-	"library-service/internal/config"
-	"library-service/internal/handler"
-	"library-service/internal/provider/currency"
-	"library-service/internal/repository"
-	"library-service/internal/service/auth"
-	"library-service/internal/service/library"
-	"library-service/internal/service/payment"
-	"library-service/internal/service/subscription"
-	"library-service/pkg/log"
-	"library-service/pkg/server"
+	"TrackMe/internal/cache"
+	"TrackMe/internal/config"
+	"TrackMe/internal/handler"
+	"TrackMe/internal/provider/currency"
+	"TrackMe/internal/repository"
+	"TrackMe/internal/service/auth"
+	"TrackMe/internal/service/library"
+	"TrackMe/internal/service/payment"
+	"TrackMe/internal/service/subscription"
+	"TrackMe/pkg/log"
+	"TrackMe/pkg/server"
 )
 
 // Run initializes whole application

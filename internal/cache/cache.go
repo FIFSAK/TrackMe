@@ -1,15 +1,15 @@
 package cache
 
 import (
-	"library-service/internal/cache/memory"
-	"library-service/internal/cache/redis"
-	"library-service/internal/domain/author"
-	"library-service/internal/domain/book"
-	"library-service/pkg/store"
+	"TrackMe/internal/cache/memory"
+	"TrackMe/internal/cache/redis"
+	"TrackMe/internal/domain/book"
+	"TrackMe/internal/domain/client"
+	"TrackMe/pkg/store"
 )
 
 type Dependencies struct {
-	AuthorRepository author.Repository
+	AuthorRepository client.Repository
 	BookRepository   book.Repository
 }
 
@@ -21,7 +21,7 @@ type Cache struct {
 	dependencies Dependencies
 	redis        store.Redis
 
-	Author author.Cache
+	Author client.Cache
 	Book   book.Cache
 }
 

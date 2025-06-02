@@ -7,10 +7,10 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
 
-	"library-service/internal/domain/author"
-	"library-service/internal/service/library"
-	"library-service/pkg/server/response"
-	"library-service/pkg/store"
+	"TrackMe/internal/domain/client"
+	"TrackMe/internal/service/library"
+	"TrackMe/pkg/server/response"
+	"TrackMe/pkg/store"
 )
 
 type AuthorHandler struct {
@@ -40,7 +40,7 @@ func (h *AuthorHandler) Routes() chi.Router {
 // @Tags		authors
 // @Accept		json
 // @Produce	json
-// @Success	200			{array}		author.Response
+// @Success	200			{array}		client.Response
 // @Failure	500			{object}	response.Object
 // @Router		/authors 	[get]
 func (h *AuthorHandler) list(w http.ResponseWriter, r *http.Request) {
@@ -53,17 +53,17 @@ func (h *AuthorHandler) list(w http.ResponseWriter, r *http.Request) {
 	response.OK(w, r, res)
 }
 
-// @Summary	add a new author to the repository
+// @Summary	add a new client to the repository
 // @Tags		authors
 // @Accept		json
 // @Produce	json
-// @Param		request	body		author.Request	true	"body param"
-// @Success	200		{object}	author.Response
+// @Param		request	body		client.Request	true	"body param"
+// @Success	200		{object}	client.Response
 // @Failure	400		{object}	response.Object
 // @Failure	500		{object}	response.Object
 // @Router		/authors [post]
 func (h *AuthorHandler) add(w http.ResponseWriter, r *http.Request) {
-	req := author.Request{}
+	req := client.Request{}
 	if err := render.Bind(r, &req); err != nil {
 		response.BadRequest(w, r, err, req)
 		return
@@ -78,12 +78,12 @@ func (h *AuthorHandler) add(w http.ResponseWriter, r *http.Request) {
 	response.OK(w, r, res)
 }
 
-// @Summary	get the author from the repository
+// @Summary	get the client from the repository
 // @Tags		authors
 // @Accept		json
 // @Produce	json
 // @Param		id	path		int	true	"path param"
-// @Success	200	{object}	author.Response
+// @Success	200	{object}	client.Response
 // @Failure	404	{object}	response.Object
 // @Failure	500	{object}	response.Object
 // @Router		/authors/{id} [get]
@@ -104,12 +104,12 @@ func (h *AuthorHandler) get(w http.ResponseWriter, r *http.Request) {
 	response.OK(w, r, res)
 }
 
-// @Summary	update the author in the repository
+// @Summary	update the client in the repository
 // @Tags		authors
 // @Accept		json
 // @Produce	json
 // @Param		id		path	int				true	"path param"
-// @Param		request	body	author.Request	true	"body param"
+// @Param		request	body	client.Request	true	"body param"
 // @Success	200
 // @Failure	400	{object}	response.Object
 // @Failure	404	{object}	response.Object
@@ -118,7 +118,7 @@ func (h *AuthorHandler) get(w http.ResponseWriter, r *http.Request) {
 func (h *AuthorHandler) update(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 
-	req := author.Request{}
+	req := client.Request{}
 	if err := render.Bind(r, &req); err != nil {
 		response.BadRequest(w, r, err, req)
 		return
@@ -135,7 +135,7 @@ func (h *AuthorHandler) update(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// @Summary	delete the author from the repository
+// @Summary	delete the client from the repository
 // @Tags		authors
 // @Accept		json
 // @Produce	json

@@ -7,7 +7,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"library-service/internal/domain/member"
+	"TrackMe/internal/domain/member"
 )
 
 // MemberRepository provides an in-memory implementation of the member repository.

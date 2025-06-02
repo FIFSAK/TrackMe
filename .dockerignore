@@ -5,3 +5,4 @@ example*
 *.deployment.yaml
 stack
 .vscode
+.idea

@@ -34,7 +34,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/author.Response"
+                                "$ref": "#/definitions/client.Response"
                             }
                         }
                     },
@@ -56,7 +56,7 @@ const docTemplate = `{
                 "tags": [
                     "authors"
                 ],
-                "summary": "add a new author to the repository",
+                "summary": "add a new client to the repository",
                 "parameters": [
                     {
                         "description": "body param",
@@ -64,7 +64,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/author.Request"
+                            "$ref": "#/definitions/client.Request"
                         }
                     }
                 ],
@@ -72,7 +72,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/author.Response"
+                            "$ref": "#/definitions/client.Response"
                         }
                     },
                     "400": {
@@ -101,7 +101,7 @@ const docTemplate = `{
                 "tags": [
                     "authors"
                 ],
-                "summary": "get the author from the repository",
+                "summary": "get the client from the repository",
                 "parameters": [
                     {
                         "type": "integer",
@@ -115,7 +115,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/author.Response"
+                            "$ref": "#/definitions/client.Response"
                         }
                     },
                     "404": {
@@ -142,7 +142,7 @@ const docTemplate = `{
                 "tags": [
                     "authors"
                 ],
-                "summary": "update the author in the repository",
+                "summary": "update the client in the repository",
                 "parameters": [
                     {
                         "type": "integer",
@@ -157,7 +157,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/author.Request"
+                            "$ref": "#/definitions/client.Request"
                         }
                     }
                 ],
@@ -195,7 +195,7 @@ const docTemplate = `{
                 "tags": [
                     "authors"
                 ],
-                "summary": "delete the author from the repository",
+                "summary": "delete the client from the repository",
                 "parameters": [
                     {
                         "type": "integer",
@@ -459,7 +459,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/author.Response"
+                                "$ref": "#/definitions/client.Response"
                             }
                         }
                     },
@@ -734,7 +734,7 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "author.Request": {
+        "client.Request": {
             "type": "object",
             "properties": {
                 "fullName": {
@@ -748,7 +748,7 @@ const docTemplate = `{
                 }
             }
         },
-        "author.Response": {
+        "client.Response": {
             "type": "object",
             "properties": {
                 "fullName": {

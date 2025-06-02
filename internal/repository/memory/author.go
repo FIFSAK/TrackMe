@@ -7,34 +7,34 @@ import (
 
 	"github.com/google/uuid"
 
-	"library-service/internal/domain/author"
+	"TrackMe/internal/domain/client"
 )
 
 // AuthorRepository handles CRUD operations for authors in an in-memory database.
 type AuthorRepository struct {
-	db map[string]author.Entity
+	db map[string]client.Entity
 	sync.RWMutex
 }
 
 // NewAuthorRepository creates a new AuthorRepository.
 func NewAuthorRepository() *AuthorRepository {
-	return &AuthorRepository{db: make(map[string]author.Entity)}
+	return &AuthorRepository{db: make(map[string]client.Entity)}
 }
 
 // List retrieves all authors from the in-memory database.
-func (r *AuthorRepository) List(ctx context.Context) ([]author.Entity, error) {
+func (r *AuthorRepository) List(ctx context.Context) ([]client.Entity, error) {
 	r.RLock()
 	defer r.RUnlock()
 
-	authors := make([]author.Entity, 0, len(r.db))
+	authors := make([]client.Entity, 0, len(r.db))
 	for _, data := range r.db {
 		authors = append(authors, data)
 	}
 	return authors, nil
 }
 
-// Add inserts a new author into the in-memory database.
-func (r *AuthorRepository) Add(ctx context.Context, data author.Entity) (string, error) {
+// Add inserts a new client into the in-memory database.
+func (r *AuthorRepository) Add(ctx context.Context, data client.Entity) (string, error) {
 	r.Lock()
 	defer r.Unlock()
 
@@ -44,20 +44,20 @@ func (r *AuthorRepository) Add(ctx context.Context, data author.Entity) (string,
 	return id, nil
 }
 
-// Get retrieves an author by ID from the in-memory database.
-func (r *AuthorRepository) Get(ctx context.Context, id string) (author.Entity, error) {
+// Get retrieves an client by ID from the in-memory database.
+func (r *AuthorRepository) Get(ctx context.Context, id string) (client.Entity, error) {
 	r.RLock()
 	defer r.RUnlock()
 
 	data, ok := r.db[id]
 	if !ok {
-		return author.Entity{}, sql.ErrNoRows
+		return client.Entity{}, sql.ErrNoRows
 	}
 	return data, nil
 }
 
-// Update modifies an existing author in the in-memory database.
-func (r *AuthorRepository) Update(ctx context.Context, id string, data author.Entity) error {
+// Update modifies an existing client in the in-memory database.
+func (r *AuthorRepository) Update(ctx context.Context, id string, data client.Entity) error {
 	r.Lock()
 	defer r.Unlock()
 
@@ -68,7 +68,7 @@ func (r *AuthorRepository) Update(ctx context.Context, id string, data author.En
 	return nil
 }
 
-// Delete removes an author by ID from the in-memory database.
+// Delete removes an client by ID from the in-memory database.
 func (r *AuthorRepository) Delete(ctx context.Context, id string) error {
 	r.Lock()
 	defer r.Unlock()

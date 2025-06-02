@@ -1,7 +1,7 @@
 package payment
 
 import (
-	"library-service/internal/provider/currency"
+	"TrackMe/internal/provider/currency"
 )
 
 // Configuration is an alias for a function that will take in a pointer to a Service and modify it

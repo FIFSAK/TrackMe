@@ -6,10 +6,10 @@ import (
 
 	"go.uber.org/zap"
 
-	"library-service/internal/domain/author"
-	"library-service/internal/domain/book"
-	"library-service/pkg/log"
-	"library-service/pkg/store"
+	"TrackMe/internal/domain/book"
+	"TrackMe/internal/domain/client"
+	"TrackMe/pkg/log"
+	"TrackMe/pkg/store"
 )
 
 // ListBooks retrieves all books from the repository.
@@ -127,7 +127,7 @@ func (s *Service) DeleteBook(ctx context.Context, id string) error {
 }
 
 // ListBookAuthors retrieves all authors of a book by book ID.
-func (s *Service) ListBookAuthors(ctx context.Context, id string) ([]author.Response, error) {
+func (s *Service) ListBookAuthors(ctx context.Context, id string) ([]client.Response, error) {
 	logger := log.LoggerFromContext(ctx).Named("list_book_authors").With(zap.String("id", id))
 
 	// Retrieve the book entity from the repository
@@ -142,15 +142,15 @@ func (s *Service) ListBookAuthors(ctx context.Context, id string) ([]author.Resp
 	}
 
 	// Retrieve the authors of the book
-	authors := make([]author.Response, len(bookEntity.Authors))
+	authors := make([]client.Response, len(bookEntity.Authors))
 	for i, authorID := range bookEntity.Authors {
 		authorResp, err := s.GetAuthor(ctx, authorID)
 		if err != nil {
 			if errors.Is(err, store.ErrorNotFound) {
-				logger.Warn("author not found", zap.Error(err))
+				logger.Warn("client not found", zap.Error(err))
 				continue
 			}
-			logger.Error("failed to get author", zap.Error(err))
+			logger.Error("failed to get client", zap.Error(err))
 			return nil, err
 		}
 		authors[i] = authorResp

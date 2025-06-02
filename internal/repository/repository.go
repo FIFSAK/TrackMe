@@ -1,13 +1,13 @@
 package repository
 
 import (
-	"library-service/internal/domain/author"
-	"library-service/internal/domain/book"
-	"library-service/internal/domain/member"
-	"library-service/internal/repository/memory"
-	"library-service/internal/repository/mongo"
-	"library-service/internal/repository/postgres"
-	"library-service/pkg/store"
+	"TrackMe/internal/domain/book"
+	"TrackMe/internal/domain/client"
+	"TrackMe/internal/domain/member"
+	"TrackMe/internal/repository/memory"
+	"TrackMe/internal/repository/mongo"
+	"TrackMe/internal/repository/postgres"
+	"TrackMe/pkg/store"
 )
 
 // Configuration is an alias for a function that will take in a pointer to a Repository and modify it
@@ -18,7 +18,7 @@ type Repository struct {
 	mongo    store.Mongo
 	postgres store.SQLX
 
-	Author author.Repository
+	Author client.Repository
 	Book   book.Repository
 	Member member.Repository
 }
@@ -82,10 +82,10 @@ func WithMongoStore(uri, name string) Configuration {
 	}
 }
 
-// WithPostgresStore applies a postgres store to the Repository
+// WithPostgresStore applies a mongo store to the Repository
 func WithPostgresStore(dataSourceName string) Configuration {
 	return func(s *Repository) (err error) {
-		// Create the postgres store, if we needed parameters, such as connection strings they could be inputted here
+		// Create the mongo store, if we needed parameters, such as connection strings they could be inputted here
 		s.postgres, err = store.NewSQL(dataSourceName)
 		if err != nil {
 			return

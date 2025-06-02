@@ -7,10 +7,10 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
 
-	"library-service/internal/domain/member"
-	"library-service/internal/service/subscription"
-	"library-service/pkg/server/response"
-	"library-service/pkg/store"
+	"TrackMe/internal/domain/member"
+	"TrackMe/internal/service/subscription"
+	"TrackMe/pkg/server/response"
+	"TrackMe/pkg/store"
 )
 
 type MemberHandler struct {

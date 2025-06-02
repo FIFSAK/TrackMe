@@ -7,10 +7,10 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
 
-	"library-service/internal/domain/book"
-	"library-service/internal/service/library"
-	"library-service/pkg/server/response"
-	"library-service/pkg/store"
+	"TrackMe/internal/domain/book"
+	"TrackMe/internal/service/library"
+	"TrackMe/pkg/server/response"
+	"TrackMe/pkg/store"
 )
 
 type BookHandler struct {
@@ -164,7 +164,7 @@ func (h *BookHandler) delete(w http.ResponseWriter, r *http.Request) {
 // @Accept		json
 // @Produce	json
 // @Param		id	path		int	true	"path param"
-// @Success	200	{array}		author.Response
+// @Success	200	{array}		client.Response
 // @Failure	404	{object}	response.Object
 // @Failure	500	{object}	response.Object
 // @Router		/books/{id}/authors [get]

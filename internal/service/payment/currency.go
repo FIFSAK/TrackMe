@@ -8,8 +8,8 @@ import (
 
 	"go.uber.org/zap"
 
-	"library-service/internal/provider/currency"
-	"library-service/pkg/log"
+	"TrackMe/internal/provider/currency"
+	"TrackMe/pkg/log"
 )
 
 func (s *Service) GetCurrencyRatesByDate(ctx context.Context, date time.Time) (dest []currency.Rate, err error) {

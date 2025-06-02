@@ -127,7 +127,7 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/response.Object'
-      summary: add a new author to the repository
+      summary: add a new client to the repository
       tags:
       - authors
   /authors/{id}:
@@ -153,7 +153,7 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/response.Object'
-      summary: delete the author from the repository
+      summary: delete the client from the repository
       tags:
       - authors
     get:
@@ -180,7 +180,7 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/response.Object'
-      summary: get the author from the repository
+      summary: get the client from the repository
       tags:
       - authors
     put:
@@ -215,7 +215,7 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/response.Object'
-      summary: update the author in the repository
+      summary: update the client in the repository
       tags:
       - authors
   /books:

@@ -1,19 +1,19 @@
 package handler
 
 import (
+	"TrackMe/internal/service/payment"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/oauth"
 	httpSwagger "github.com/swaggo/http-swagger/v2"
-	"library-service/internal/service/payment"
 
-	"library-service/docs"
-	"library-service/internal/config"
-	"library-service/internal/handler/http"
-	"library-service/internal/service/auth"
-	"library-service/internal/service/library"
-	"library-service/internal/service/subscription"
-	"library-service/pkg/server/router"
+	"TrackMe/docs"
+	"TrackMe/internal/config"
+	"TrackMe/internal/handler/http"
+	"TrackMe/internal/service/auth"
+	"TrackMe/internal/service/library"
+	"TrackMe/internal/service/subscription"
+	"TrackMe/pkg/server/router"
 )
 
 type Dependencies struct {

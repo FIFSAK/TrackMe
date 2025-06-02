@@ -10,8 +10,8 @@ import (
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
 
-	"library-service/internal/domain/book"
-	"library-service/pkg/store"
+	"TrackMe/internal/domain/book"
+	"TrackMe/pkg/store"
 )
 
 // BookRepository handles CRUD operations for books in a PostgreSQL database.

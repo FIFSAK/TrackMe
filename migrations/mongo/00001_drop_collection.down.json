@@ -1,0 +1,27 @@
+[
+  {
+    "dropCollection": "client"
+  },
+  {
+    "dropCollection": "metric"
+  },
+  {
+    "dropIndexes": "client",
+    "indexes": [
+      "current_stage_index",
+      "last_updated_index",
+      "is_active_index",
+      "source_index",
+      "channel_index",
+      "app_status_index",
+      "last_login_date_index"
+    ]
+  },
+  {
+    "dropIndexes": "metric",
+    "indexes": [
+      "type_index",
+      "interval_index"
+    ]
+  }
+]

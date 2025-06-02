@@ -17,7 +17,7 @@ WORKDIR /build
 COPY . /build
 
 # Build the Go application for Linux (amd64) with CGO enabled
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o library-service .
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o TrackMe-service .
 
 # Create a new stage for the final application image (based on Alpine Linux)
 FROM alpine:3.18 as hoster
@@ -29,7 +29,7 @@ FROM alpine:3.18 as hoster
 COPY --from=builder /build/.env ./.env
 COPY --from=builder /build/assets ./assets
 COPY --from=builder /build/templates ./templates
-COPY --from=builder /build/library-service ./library-service
+COPY --from=builder /build/TrackMe ./TrackMe
 
 # Define the entry point for the final application image
-ENTRYPOINT [ "./library-service" ]
+ENTRYPOINT [ "./TrackMe" ]

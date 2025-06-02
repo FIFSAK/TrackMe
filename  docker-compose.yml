@@ -2,8 +2,8 @@ version: '3.4'
 
 services:
   app:
-    image: library-service-app
-    container_name: library-service-app
+    image: trackme-app
+    container_name: trackme-service-app
     build:
       context: .
       dockerfile: Dockerfile
@@ -25,6 +25,6 @@ services:
   postgres:
     image: postgres:latest
     environment:
-      POSTGRES_DB: postgres
-      POSTGRES_USER: postgres
+      POSTGRES_DB: mongo
+      POSTGRES_USER: mongo
       POSTGRES_PASSWORD: password

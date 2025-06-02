@@ -1,8 +1,8 @@
 package subscription
 
 import (
-	"library-service/internal/domain/member"
-	"library-service/internal/service/library"
+	"TrackMe/internal/domain/member"
+	"TrackMe/internal/service/library"
 )
 
 // Configuration is an alias for a function that will take in a pointer to a Service and modify it
@@ -40,9 +40,9 @@ func WithMemberRepository(memberRepository member.Repository) Configuration {
 	}
 }
 
-// WithLibraryService applies a given library service to the Service
+// WithLibraryService applies a given TrackMe service to the Service
 func WithLibraryService(libraryService *library.Service) Configuration {
-	// Add the library service, if we needed parameters, such as connection strings they could be inputted here
+	// Add the TrackMe service, if we needed parameters, such as connection strings they could be inputted here
 	return func(s *Service) error {
 		s.libraryService = libraryService
 		return nil

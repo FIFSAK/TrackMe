@@ -1,8 +1,8 @@
 package library
 
 import (
-	"library-service/internal/domain/author"
-	"library-service/internal/domain/book"
+	"TrackMe/internal/domain/book"
+	"TrackMe/internal/domain/client"
 )
 
 // Configuration is an alias for a function that will take in a pointer to a Service and modify it
@@ -10,9 +10,9 @@ type Configuration func(s *Service) error
 
 // Service is an implementation of the Service
 type Service struct {
-	authorRepository author.Repository
+	authorRepository client.Repository
 	bookRepository   book.Repository
-	authorCache      author.Cache
+	authorCache      client.Cache
 	bookCache        book.Cache
 }
 
@@ -32,8 +32,8 @@ func New(configs ...Configuration) (s *Service, err error) {
 	return
 }
 
-// WithAuthorRepository applies a given author repository to the Service
-func WithAuthorRepository(authorRepository author.Repository) Configuration {
+// WithAuthorRepository applies a given client repository to the Service
+func WithAuthorRepository(authorRepository client.Repository) Configuration {
 	// return a function that matches the Configuration alias,
 	// You need to return this so that the parent function can take in all the needed parameters
 	return func(s *Service) error {
@@ -51,8 +51,8 @@ func WithBookRepository(bookRepository book.Repository) Configuration {
 	}
 }
 
-// WithAuthorCache applies a given author cache to the Service
-func WithAuthorCache(authorCache author.Cache) Configuration {
+// WithAuthorCache applies a given client cache to the Service
+func WithAuthorCache(authorCache client.Cache) Configuration {
 	// return a function that matches the Configuration alias,
 	// You need to return this so that the parent function can take in all the needed parameters
 	return func(s *Service) error {
