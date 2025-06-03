@@ -1,5 +1,7 @@
 package contract
 
+import autopayment "TrackMe/internal/domain/autopayment"
+
 // Entity represents a contract in the system.
 type Entity struct {
 	// ID is the unique identifier for the contract (UUID).
@@ -27,7 +29,7 @@ type Entity struct {
 	PaymentFrequency *string `db:"payment_frequency" bson:"payment_frequency"`
 
 	// AutoPayment indicates the status of auto-payment (enabled/disabled).
-	AutoPayment *bool `db:"auto_payment" bson:"auto_payment"`
+	AutoPayment autopayment.Entity `db:"auto_payment" bson:"auto_payment"`
 }
 
 // New creates a new Contract instance.
@@ -41,6 +43,6 @@ func New(req Request) Entity {
 		ExpirationDate:   &req.ExpirationDate,
 		Amount:           &req.Amount,
 		PaymentFrequency: &req.PaymentFrequency,
-		AutoPayment:      &req.AutoPayment,
+		AutoPayment:      autopayment.New(req.AutoPayment),
 	}
 }

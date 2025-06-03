@@ -10,9 +10,9 @@ type Configuration func(s *Service) error
 
 // Service is an implementation of the Service
 type Service struct {
-	authorRepository client.Repository
+	clientRepository client.Repository
 	bookRepository   book.Repository
-	authorCache      client.Cache
+	clientCache      client.Cache
 	bookCache        book.Cache
 }
 
@@ -37,7 +37,7 @@ func WithAuthorRepository(authorRepository client.Repository) Configuration {
 	// return a function that matches the Configuration alias,
 	// You need to return this so that the parent function can take in all the needed parameters
 	return func(s *Service) error {
-		s.authorRepository = authorRepository
+		s.clientRepository = authorRepository
 		return nil
 	}
 }
@@ -52,11 +52,11 @@ func WithBookRepository(bookRepository book.Repository) Configuration {
 }
 
 // WithAuthorCache applies a given client cache to the Service
-func WithAuthorCache(authorCache client.Cache) Configuration {
+func WithAuthorCache(clientCache client.Cache) Configuration {
 	// return a function that matches the Configuration alias,
 	// You need to return this so that the parent function can take in all the needed parameters
 	return func(s *Service) error {
-		s.authorCache = authorCache
+		s.clientCache = clientCache
 		return nil
 	}
 }

@@ -83,7 +83,7 @@ func WithHTTPHandler() Configuration {
 			// use the Bearer Authentication middleware
 			r.Use(oauth.Authorize(h.dependencies.Configs.TOKEN.Salt, nil))
 
-			r.Mount("/authors", authorHandler.Routes())
+			r.Mount("/clients", authorHandler.Routes())
 			r.Mount("/books", bookHandler.Routes())
 			r.Mount("/members", memberHandler.Routes())
 		})

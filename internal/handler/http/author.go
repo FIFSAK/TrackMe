@@ -44,7 +44,7 @@ func (h *AuthorHandler) Routes() chi.Router {
 // @Failure	500			{object}	response.Object
 // @Router		/authors 	[get]
 func (h *AuthorHandler) list(w http.ResponseWriter, r *http.Request) {
-	res, err := h.libraryService.ListAuthors(r.Context())
+	res, err := h.libraryService.ListClients(r.Context())
 	if err != nil {
 		response.InternalServerError(w, r, err)
 		return
@@ -69,7 +69,7 @@ func (h *AuthorHandler) add(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	res, err := h.libraryService.AddAuthor(r.Context(), req)
+	res, err := h.libraryService.AddClient(r.Context(), req)
 	if err != nil {
 		response.InternalServerError(w, r, err)
 		return
@@ -90,7 +90,7 @@ func (h *AuthorHandler) add(w http.ResponseWriter, r *http.Request) {
 func (h *AuthorHandler) get(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 
-	res, err := h.libraryService.GetAuthor(r.Context(), id)
+	res, err := h.libraryService.GetClient(r.Context(), id)
 	if err != nil {
 		switch {
 		case errors.Is(err, store.ErrorNotFound):
@@ -124,7 +124,7 @@ func (h *AuthorHandler) update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.libraryService.UpdateAuthor(r.Context(), id, req); err != nil {
+	if err := h.libraryService.UpdateClient(r.Context(), id, req); err != nil {
 		switch {
 		case errors.Is(err, store.ErrorNotFound):
 			response.NotFound(w, r, err)
@@ -147,7 +147,7 @@ func (h *AuthorHandler) update(w http.ResponseWriter, r *http.Request) {
 func (h *AuthorHandler) delete(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 
-	if err := h.libraryService.DeleteAuthor(r.Context(), id); err != nil {
+	if err := h.libraryService.DeleteClient(r.Context(), id); err != nil {
 		switch {
 		case errors.Is(err, store.ErrorNotFound):
 			response.NotFound(w, r, err)

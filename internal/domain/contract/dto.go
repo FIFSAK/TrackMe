@@ -1,21 +1,22 @@
 package contract
 
 import (
+	autopayment "TrackMe/internal/domain/autopayment"
 	"errors"
 	"net/http"
 )
 
 // Request represents the request payload for contract operations.
 type Request struct {
-	ID               string  `json:"id"`
-	Name             string  `json:"name"`
-	Number           string  `json:"number"`
-	Status           string  `json:"status"`
-	ConclusionDate   string  `json:"conclusion_date"`
-	ExpirationDate   string  `json:"expiration_date"`
-	Amount           float64 `json:"amount"`
-	PaymentFrequency string  `json:"payment_frequency"`
-	AutoPayment      bool    `json:"auto_payment"`
+	ID               string              `json:"id"`
+	Name             string              `json:"name"`
+	Number           string              `json:"number"`
+	Status           string              `json:"status"`
+	ConclusionDate   string              `json:"conclusion_date"`
+	ExpirationDate   string              `json:"expiration_date"`
+	Amount           float64             `json:"amount"`
+	PaymentFrequency string              `json:"payment_frequency"`
+	AutoPayment      autopayment.Request `json:"auto_payment"`
 }
 
 // Bind validates the request payload.
@@ -43,15 +44,15 @@ func (req *Request) Bind(r *http.Request) error {
 
 // Response represents the response payload for contract operations.
 type Response struct {
-	ID               string  `json:"id"`
-	Name             string  `json:"name"`
-	Number           string  `json:"number"`
-	Status           string  `json:"status"`
-	ConclusionDate   string  `json:"conclusion_date"`
-	ExpirationDate   string  `json:"expiration_date"`
-	Amount           float64 `json:"amount"`
-	PaymentFrequency string  `json:"payment_frequency"`
-	AutoPayment      bool    `json:"auto_payment"`
+	ID               string               `json:"id"`
+	Name             string               `json:"name"`
+	Number           string               `json:"number"`
+	Status           string               `json:"status"`
+	ConclusionDate   string               `json:"conclusion_date"`
+	ExpirationDate   string               `json:"expiration_date"`
+	Amount           float64              `json:"amount"`
+	PaymentFrequency string               `json:"payment_frequency"`
+	AutoPayment      autopayment.Response `json:"auto_payment"`
 }
 
 // ParseFromEntity creates a new Response from a given Entity.
@@ -65,7 +66,7 @@ func ParseFromEntity(entity Entity) Response {
 		ExpirationDate:   *entity.ExpirationDate,
 		Amount:           *entity.Amount,
 		PaymentFrequency: *entity.PaymentFrequency,
-		AutoPayment:      *entity.AutoPayment,
+		AutoPayment:      autopayment.ParseFromEntity(entity.AutoPayment),
 	}
 }
 

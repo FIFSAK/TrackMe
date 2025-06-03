@@ -1,6 +1,6 @@
 [
   {
-    "createCollection": "client",
+    "createCollection": "clients",
     "options": {
       "validator": {
         "$jsonSchema": {
@@ -58,7 +58,7 @@
     }
   },
   {
-    "createCollection": "metric",
+    "createCollection": "metrics",
     "options": {
       "validator": {
         "$jsonSchema": {
