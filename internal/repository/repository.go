@@ -2,6 +2,8 @@ package repository
 
 import (
 	"TrackMe/internal/domain/client"
+	"TrackMe/internal/domain/stage"
+	"TrackMe/internal/repository/memory"
 	"TrackMe/internal/repository/mongo"
 	"TrackMe/pkg/store"
 )
@@ -13,8 +15,8 @@ type Configuration func(r *Repository) error
 type Repository struct {
 	mongo    store.Mongo
 	postgres store.SQLX
-
-	Client client.Repository
+	Stage    stage.Repository
+	Client   client.Repository
 }
 
 // New takes a variable amount of Configuration functions and returns a new Repository
@@ -47,15 +49,14 @@ func (r *Repository) Close() {
 }
 
 // WithMemoryStore applies a memory store to the Repository
-//func WithMemoryStore() Configuration {
-//	return func(s *Repository) (err error) {
-//		// Create the memory store, if we needed parameters, such as connection strings they could be inputted here
-//		s.Author = memory.NewAuthorRepository()
-//
-//
-//		return
-//	}
-//}
+func WithMemoryStore() Configuration {
+	return func(s *Repository) (err error) {
+		// Create the memory store, if we needed parameters, such as connection strings they could be inputted here
+		s.Stage = memory.NewStageRepository()
+
+		return
+	}
+}
 
 // WithMongoStore applies a mongo store to the Repository
 func WithMongoStore(uri, name string) Configuration {

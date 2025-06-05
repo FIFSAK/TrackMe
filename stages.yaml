@@ -6,44 +6,44 @@ stages:
   - id: product_selection
     name: Выбор продукта
     order: 2
-    transitions: [data_consent]
+    transitions: [registration, data_consent]
   - id: data_consent
     name: Подтверждение данных
     order: 3
-    transitions: [form_filling]
+    transitions: [product_selection, form_filling]
   - id: form_filling
     name: Заполнение формы
     order: 4
-    transitions: [participants_specification]
+    transitions: [data_consent, participants_specification]
   - id: participants_specification
     name: Указание участников
     order: 5
-    transitions: [terms_agreement]
+    transitions: [form_filling, terms_agreement]
   - id: terms_agreement
     name: Согласование условий
     order: 6
-    transitions: [client_questionnaire]
+    transitions: [participants_specification, client_questionnaire]
   - id: client_questionnaire
     name: Анкета клиента
     order: 7
-    transitions: [approval_waiting]
+    transitions: [terms_agreement, approval_waiting]
   - id: approval_waiting
     name: Ожидание одобрения
     order: 8
-    transitions: [modifications]
+    transitions: [client_questionnaire, modifications]
   - id: modifications
     name: Внесение изменений
     order: 9
-    transitions: [document_signing]
+    transitions: [approval_waiting, document_signing]
   - id: document_signing
     name: Подписание документов
     order: 10
-    transitions: [payment_waiting]
+    transitions: [modifications, payment_waiting]
   - id: payment_waiting
     name: Ожидание оплаты
     order: 11
-    transitions: [completed]
+    transitions: [document_signing, completed]
   - id: completed
     name: Завершено
     order: 12
-    transitions: []
+    transitions: [payment_waiting]

@@ -6,6 +6,7 @@ import (
 	"TrackMe/pkg/store"
 	"context"
 	"errors"
+	"fmt"
 	"go.uber.org/zap"
 )
 
@@ -67,34 +68,56 @@ func (s *Service) GetClient(ctx context.Context, id string) (client.Response, er
 
 // UpdateClient updates an existing client in the repository.
 func (s *Service) UpdateClient(ctx context.Context, id string, req client.Request) (client.Response, error) {
-	logger := log.LoggerFromContext(ctx).Named("update_client_stage").With(
+	logger := log.LoggerFromContext(ctx).Named("update_client").With(
 		zap.String("client_id", id),
 		zap.Any("request", req),
 	)
 
-	var existingClient client.Entity
-	var err error
-
-	existingClient, err = s.clientRepository.Get(ctx, id)
+	existing, err := s.clientRepository.Get(ctx, id)
 	if err != nil && !errors.Is(err, store.ErrorNotFound) {
 		logger.Error("failed to get client", zap.Error(err))
 		return client.Response{}, err
 	}
 
-	updatedClient := client.New(req)
-	updatedClient.ID = id
+	updated := client.New(req)
+	updated.ID = id
 
-	if existingClient.RegistrationDate != nil {
-		updatedClient.RegistrationDate = existingClient.RegistrationDate
+	if existing.RegistrationDate != nil {
+		updated.RegistrationDate = existing.RegistrationDate
 	}
 
-	updatedClient, err = s.clientRepository.Update(ctx, id, updatedClient)
+	if req.Stage != "" {
+		var newStage string
+
+		switch req.Stage {
+		case "next", "prev":
+			if existing.CurrentStage == nil {
+				return client.Response{}, fmt.Errorf("cannot transition %s from empty stage", req.Stage)
+			}
+			if s.StageRepository == nil {
+				return client.Response{}, fmt.Errorf("stage repository is not initialized")
+			}
+
+			newStage, err = s.StageRepository.UpdateStage(ctx, *existing.CurrentStage, req.Stage)
+			if err != nil {
+				logger.Error("invalid stage transition",
+					zap.String("from", *existing.CurrentStage),
+					zap.String("direction", req.Stage),
+					zap.Error(err))
+				return client.Response{}, err
+			}
+		}
+
+		updated.CurrentStage = &newStage
+	}
+
+	result, err := s.clientRepository.Update(ctx, id, updated)
 	if err != nil {
 		logger.Error("failed to update client", zap.Error(err))
 		return client.Response{}, err
 	}
 
-	return client.ParseFromEntity(updatedClient), nil
+	return client.ParseFromEntity(result), nil
 }
 
 // DeleteClient deletes a client by ID from the repository.

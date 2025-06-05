@@ -20,4 +20,6 @@ type Repository interface {
 
 	// Delete removes a member entity by its ID.
 	Delete(ctx context.Context, id string) error
+
+	UpdateStage(ctx context.Context, currentStage, option string) (string, error)
 }

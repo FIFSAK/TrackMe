@@ -36,7 +36,7 @@ func Run() {
 	}
 
 	repositories, err := repository.New(
-		repository.WithMongoStore(configs.MONGO.DSN, "name"))
+		repository.WithMongoStore(configs.MONGO.DSN, "name"), repository.WithMemoryStore())
 	if err != nil {
 		logger.Error("ERR_INIT_REPOSITORIES", zap.Error(err))
 		return
@@ -44,7 +44,7 @@ func Run() {
 	defer repositories.Close()
 
 	trackService, err := track.New(
-		track.WithClientRepository(repositories.Client))
+		track.WithClientRepository(repositories.Client), track.WithStageRepository(repositories.Stage))
 	if err != nil {
 		logger.Error("ERR_INIT_LIBRARY_SERVICE", zap.Error(err))
 		return

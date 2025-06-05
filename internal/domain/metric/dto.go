@@ -7,7 +7,6 @@ import (
 
 // Request represents the request payload for metric operations.
 type Request struct {
-	ID        string  `json:"id"`
 	Type      string  `json:"type"`
 	Value     float64 `json:"value"`
 	Interval  string  `json:"interval"`
@@ -16,9 +15,6 @@ type Request struct {
 
 // Bind validates the request payload.
 func (req *Request) Bind(r *http.Request) error {
-	if req.ID == "" {
-		return errors.New("id: cannot be blank")
-	}
 	if req.Type == "" {
 		return errors.New("type: cannot be blank")
 	}
@@ -33,7 +29,6 @@ func (req *Request) Bind(r *http.Request) error {
 
 // Response represents the response payload for metric operations.
 type Response struct {
-	ID        string  `json:"id"`
 	Type      string  `json:"type"`
 	Value     float64 `json:"value"`
 	Interval  string  `json:"interval"`
@@ -43,7 +38,6 @@ type Response struct {
 // ParseFromEntity converts a metric entity to a response payload.
 func ParseFromEntity(data Entity) Response {
 	return Response{
-		ID:        data.ID,
 		Type:      *data.Type,
 		Value:     *data.Value,
 		Interval:  *data.Interval,

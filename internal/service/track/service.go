@@ -2,6 +2,7 @@ package track
 
 import (
 	"TrackMe/internal/domain/client"
+	"TrackMe/internal/domain/stage"
 )
 
 // Configuration is an alias for a function that will take in a pointer to a Service and modify it
@@ -10,6 +11,7 @@ type Configuration func(s *Service) error
 // Service is an implementation of the Service
 type Service struct {
 	clientRepository client.Repository
+	StageRepository  stage.Repository
 	clientCache      client.Cache
 }
 
@@ -35,6 +37,16 @@ func WithClientRepository(authorRepository client.Repository) Configuration {
 	// You need to return this so that the parent function can take in all the needed parameters
 	return func(s *Service) error {
 		s.clientRepository = authorRepository
+		return nil
+	}
+}
+
+// WithStageRepository applies a given stage repository to the Service
+func WithStageRepository(stageRepository stage.Repository) Configuration {
+	// return a function that matches the Configuration alias,
+	// You need to return this so that the parent function can take in all the needed parameters
+	return func(s *Service) error {
+		s.StageRepository = stageRepository
 		return nil
 	}
 }
