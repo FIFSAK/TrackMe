@@ -1,12 +1,8 @@
 package repository
 
 import (
-	"TrackMe/internal/domain/book"
 	"TrackMe/internal/domain/client"
-	"TrackMe/internal/domain/member"
-	"TrackMe/internal/repository/memory"
 	"TrackMe/internal/repository/mongo"
-	"TrackMe/internal/repository/postgres"
 	"TrackMe/pkg/store"
 )
 
@@ -18,9 +14,7 @@ type Repository struct {
 	mongo    store.Mongo
 	postgres store.SQLX
 
-	Author client.Repository
-	Book   book.Repository
-	Member member.Repository
+	Client client.Repository
 }
 
 // New takes a variable amount of Configuration functions and returns a new Repository
@@ -53,16 +47,15 @@ func (r *Repository) Close() {
 }
 
 // WithMemoryStore applies a memory store to the Repository
-func WithMemoryStore() Configuration {
-	return func(s *Repository) (err error) {
-		// Create the memory store, if we needed parameters, such as connection strings they could be inputted here
-		s.Author = memory.NewAuthorRepository()
-		s.Book = memory.NewBookRepository()
-		s.Member = memory.NewMemberRepository()
-
-		return
-	}
-}
+//func WithMemoryStore() Configuration {
+//	return func(s *Repository) (err error) {
+//		// Create the memory store, if we needed parameters, such as connection strings they could be inputted here
+//		s.Author = memory.NewAuthorRepository()
+//
+//
+//		return
+//	}
+//}
 
 // WithMongoStore applies a mongo store to the Repository
 func WithMongoStore(uri, name string) Configuration {
@@ -74,31 +67,30 @@ func WithMongoStore(uri, name string) Configuration {
 		}
 		database := s.mongo.Client.Database(name)
 
-		s.Author = mongo.NewAuthorRepository(database)
-		s.Book = mongo.NewBookRepository(database)
-		s.Member = mongo.NewMemberRepository(database)
+		s.Client = mongo.NewClientRepository(database)
 
 		return
 	}
 }
 
-// WithPostgresStore applies a mongo store to the Repository
-func WithPostgresStore(dataSourceName string) Configuration {
-	return func(s *Repository) (err error) {
-		// Create the mongo store, if we needed parameters, such as connection strings they could be inputted here
-		s.postgres, err = store.NewSQL(dataSourceName)
-		if err != nil {
-			return
-		}
-
-		if err = store.Migrate(dataSourceName); err != nil {
-			return
-		}
-
-		s.Author = postgres.NewAuthorRepository(s.postgres.Client)
-		s.Book = postgres.NewBookRepository(s.postgres.Client)
-		s.Member = postgres.NewMemberRepository(s.postgres.Client)
-
-		return
-	}
-}
+//
+//// WithPostgresStore applies a mongo store to the Repository
+//func WithPostgresStore(dataSourceName string) Configuration {
+//	return func(s *Repository) (err error) {
+//		// Create the mongo store, if we needed parameters, such as connection strings they could be inputted here
+//		s.postgres, err = store.NewSQL(dataSourceName)
+//		if err != nil {
+//			return
+//		}
+//
+//		if err = store.Migrate(dataSourceName); err != nil {
+//			return
+//		}
+//
+//		s.Author = postgres.NewAuthorRepository(s.postgres.Client)
+//		s.Book = postgres.NewBookRepository(s.postgres.Client)
+//		s.Member = postgres.NewMemberRepository(s.postgres.Client)
+//
+//		return
+//	}
+//}

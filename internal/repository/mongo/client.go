@@ -3,6 +3,9 @@ package mongo
 import (
 	"context"
 	"errors"
+	"fmt"
+	"go.mongodb.org/mongo-driver/mongo/options"
+	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -23,16 +26,77 @@ func NewClientRepository(db *mongo.Database) *ClientRepository {
 }
 
 // List retrieves all client from the database.
-func (r *ClientRepository) List(ctx context.Context) ([]client.Entity, error) {
-	cur, err := r.db.Find(ctx, bson.M{})
-	if err != nil {
-		return nil, err
+func (r *ClientRepository) List(ctx context.Context, filters client.Filters, limit, offset int) ([]client.Entity, int, error) {
+	filter := bson.M{}
+
+	if filters.ID != "" {
+		objID, err := primitive.ObjectIDFromHex(filters.ID)
+		if err != nil {
+			return nil, 0, err
+		}
+		filter["_id"] = objID
 	}
+
+	if filters.Stage != "" {
+		filter["current_stage"] = filters.Stage
+	}
+
+	if filters.Source != "" {
+		filter["source"] = filters.Source
+	}
+
+	if filters.Channel != "" {
+		filter["channel"] = filters.Channel
+	}
+
+	if filters.AppStatus != "" {
+		filter["app.status"] = filters.AppStatus
+	}
+
+	// Only add is_active filter if it was explicitly set
+	if filters.IsActive {
+		filter["is_active"] = filters.IsActive
+	}
+
+	if !filters.UpdatedAfter.IsZero() {
+		filter["last_updated"] = bson.M{"$gte": filters.UpdatedAfter}
+	}
+
+	if !filters.LastLoginAfter.IsZero() {
+		filter["last_login.date"] = bson.M{"$gte": filters.LastLoginAfter}
+	}
+
+	// Add debugging to see what filter is being applied
+	fmt.Printf("MongoDB filter: %+v\n", filter)
+
+	opts := options.Find().
+		SetLimit(int64(limit)).
+		SetSkip(int64(offset)).
+		SetSort(bson.M{"last_updated": -1})
+
+	total, err := r.db.CountDocuments(ctx, filter)
+	if err != nil {
+		return nil, 0, err
+	}
+	if limit <= 0 {
+		limit = 10
+	}
+
+	cur, err := r.db.Find(ctx, filter, opts)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer cur.Close(ctx)
+
 	var clients []client.Entity
 	if err = cur.All(ctx, &clients); err != nil {
-		return nil, err
+		return nil, 0, err
 	}
-	return clients, nil
+
+	// Debug the results
+	fmt.Printf("Found %d clients in MongoDB\n", len(clients))
+
+	return clients, int(total), nil
 }
 
 // Add inserts a new client into the database.
@@ -59,31 +123,54 @@ func (r *ClientRepository) Get(ctx context.Context, id string) (client.Entity, e
 }
 
 // Update modifies an existing client in the database.
-func (r *ClientRepository) Update(ctx context.Context, id string, data client.Entity) error {
-	if id == "" {
-		data.ID = id
-		_, err := r.Add(ctx, data)
-		if err != nil {
-			return err
-		}
-		return nil
-	}
+func (r *ClientRepository) Update(ctx context.Context, id string, data client.Entity) (client.Entity, error) {
 	objID, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
-		return err
+		return client.Entity{}, err
 	}
-	args := r.prepareArgs(data)
-	if len(args) == 0 {
-		return nil
+
+	update := bson.M{
+		"$set":         prepareUpdateFields(data),
+		"$setOnInsert": bson.M{"registration_date": time.Now()},
 	}
-	res, err := r.db.UpdateOne(ctx, bson.M{"_id": objID}, bson.M{"$set": args})
+
+	opts := options.FindOneAndUpdate().
+		SetUpsert(true).
+		SetReturnDocument(options.After)
+
+	var updated client.Entity
+	err = r.db.FindOneAndUpdate(
+		ctx,
+		bson.M{"_id": objID},
+		update,
+		opts,
+	).Decode(&updated)
+
 	if err != nil {
-		return err
+		return client.Entity{}, err
 	}
-	if res.MatchedCount == 0 {
-		return store.ErrorNotFound
+
+	return updated, nil
+}
+
+func prepareUpdateFields(data client.Entity) bson.M {
+	fields := bson.M{
+		"name":          data.Name,
+		"email":         data.Email,
+		"current_stage": data.CurrentStage,
+		"last_updated":  time.Now(), // Always update this field
+		"is_active":     data.IsActive,
+		"source":        data.Source,
+		"channel":       data.Channel,
+		"app":           data.App,
+		"last_login":    data.LastLogin,
 	}
-	return nil
+
+	if len(data.Contracts) > 0 {
+		fields["contracts"] = data.Contracts
+	}
+
+	return fields
 }
 
 // Delete removes a client by ID from the database.
@@ -105,28 +192,28 @@ func (r *ClientRepository) Delete(ctx context.Context, id string) error {
 // prepareArgs prepares the update arguments for the MongoDB query.
 func (r *ClientRepository) prepareArgs(data client.Entity) bson.M {
 	args := bson.M{}
-	if data.Name != nil {
+	if data.Name != "" {
 		args["name"] = data.Name
 	}
-	if data.Email != nil {
+	if data.Email != "" {
 		args["email"] = data.Email
 	}
-	if data.CurrentStage != nil {
+	if data.CurrentStage != "" {
 		args["current_stage"] = data.CurrentStage
 	}
-	if data.RegistrationDate != nil {
-		args["registration_date"] = data.RegistrationDate
-	}
-	if data.LastUpdated != nil {
-		args["last_updated"] = data.LastUpdated
-	}
-	if data.IsActive != nil {
-		args["is_active"] = data.IsActive
-	}
-	if data.Source != nil {
+	//if data.RegistrationDate !=  {
+	//	args["registration_date"] = data.RegistrationDate
+	//}
+	//if data.LastUpdated !=  {
+	//	args["last_updated"] = data.LastUpdated
+	//}
+	//if data.IsActive !=  {
+	//	args["is_active"] = data.IsActive
+	//}
+	if data.Source != "" {
 		args["source"] = data.Source
 	}
-	if data.Channel != nil {
+	if data.Channel != "" {
 		args["channel"] = data.Channel
 	}
 	return args

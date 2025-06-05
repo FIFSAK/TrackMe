@@ -26,11 +26,17 @@ type Response struct {
 // ParseFromEntity converts an app entity to a response payload.
 func ParseFromEntity(data Entity) Response {
 	highlight := false
-	if *data.Status == "installed" {
+	if data.Status == "" {
+		return Response{
+			Status:    "unknown",
+			Highlight: false,
+		}
+	}
+	if data.Status == "installed" {
 		highlight = true
 	}
 	return Response{
-		Status:    *data.Status,
+		Status:    data.Status,
 		Highlight: highlight,
 	}
 }

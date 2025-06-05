@@ -4,7 +4,7 @@
         "contact": {}
     },
     "paths": {
-        "/authors": {
+        "/clients": {
             "get": {
                 "consumes": [
                     "application/json"
@@ -13,60 +13,17 @@
                     "application/json"
                 ],
                 "tags": [
-                    "authors"
+                    "clients"
                 ],
-                "summary": "list of authors from the repository",
+                "summary": "list of clients from the repository",
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/author.Response"
+                                "$ref": "#/definitions/client.Response"
                             }
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/response.Object"
-                        }
-                    }
-                }
-            },
-            "post": {
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "authors"
-                ],
-                "summary": "add a new author to the repository",
-                "parameters": [
-                    {
-                        "description": "body param",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/author.Request"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/author.Response"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/response.Object"
                         }
                     },
                     "500": {
@@ -78,48 +35,7 @@
                 }
             }
         },
-        "/authors/{id}": {
-            "get": {
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "authors"
-                ],
-                "summary": "get the author from the repository",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "path param",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/author.Response"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/response.Object"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/response.Object"
-                        }
-                    }
-                }
-            },
+        "/clients/{id}/stage": {
             "put": {
                 "consumes": [
                     "application/json"
@@ -128,13 +44,13 @@
                     "application/json"
                 ],
                 "tags": [
-                    "authors"
+                    "clients"
                 ],
-                "summary": "update the author in the repository",
+                "summary": "Update client",
                 "parameters": [
                     {
-                        "type": "integer",
-                        "description": "path param",
+                        "type": "string",
+                        "description": "Client ID",
                         "name": "id",
                         "in": "path",
                         "required": true
@@ -145,122 +61,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/author.Request"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK"
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/response.Object"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/response.Object"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/response.Object"
-                        }
-                    }
-                }
-            },
-            "delete": {
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "authors"
-                ],
-                "summary": "delete the author from the repository",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "path param",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK"
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/response.Object"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/response.Object"
-                        }
-                    }
-                }
-            }
-        },
-        "/books": {
-            "get": {
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "books"
-                ],
-                "summary": "list of books from the repository",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/book.Response"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/response.Object"
-                        }
-                    }
-                }
-            },
-            "post": {
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "books"
-                ],
-                "summary": "add a new book to the repository",
-                "parameters": [
-                    {
-                        "description": "body param",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/book.Request"
+                            "$ref": "#/definitions/client.Request"
                         }
                     }
                 ],
@@ -268,441 +69,19 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/book.Response"
+                            "$ref": "#/definitions/client.Response"
+                        }
+                    },
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/client.Response"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
                             "$ref": "#/definitions/response.Object"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/response.Object"
-                        }
-                    }
-                }
-            }
-        },
-        "/books/{id}": {
-            "get": {
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "books"
-                ],
-                "summary": "get the book from the repository",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "path param",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/book.Response"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/response.Object"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/response.Object"
-                        }
-                    }
-                }
-            },
-            "put": {
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "books"
-                ],
-                "summary": "update the book in the repository",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "path param",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "body param",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/book.Request"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK"
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/response.Object"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/response.Object"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/response.Object"
-                        }
-                    }
-                }
-            },
-            "delete": {
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "books"
-                ],
-                "summary": "delete the book from the repository",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "path param",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK"
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/response.Object"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/response.Object"
-                        }
-                    }
-                }
-            }
-        },
-        "/books/{id}/authors": {
-            "get": {
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "books"
-                ],
-                "summary": "list of authors from the repository",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "path param",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/author.Response"
-                            }
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/response.Object"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/response.Object"
-                        }
-                    }
-                }
-            }
-        },
-        "/members": {
-            "get": {
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "members"
-                ],
-                "summary": "list of members from the repository",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/member.Response"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/response.Object"
-                        }
-                    }
-                }
-            },
-            "post": {
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "members"
-                ],
-                "summary": "add a new member to the repository",
-                "parameters": [
-                    {
-                        "description": "body param",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/member.Request"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/member.Response"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/response.Object"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/response.Object"
-                        }
-                    }
-                }
-            }
-        },
-        "/members/{id}": {
-            "get": {
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "members"
-                ],
-                "summary": "get the member from the repository",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "path param",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/member.Response"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/response.Object"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/response.Object"
-                        }
-                    }
-                }
-            },
-            "put": {
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "members"
-                ],
-                "summary": "update the member in the repository",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "path param",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "body param",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/member.Request"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK"
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/response.Object"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/response.Object"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/response.Object"
-                        }
-                    }
-                }
-            },
-            "delete": {
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "members"
-                ],
-                "summary": "delete the member from the repository",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "path param",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK"
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/response.Object"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/response.Object"
-                        }
-                    }
-                }
-            }
-        },
-        "/members/{id}/books": {
-            "get": {
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "members"
-                ],
-                "summary": "list of books from the repository",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "path param",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/book.Response"
-                            }
                         }
                     },
                     "404": {
@@ -722,114 +101,187 @@
         }
     },
     "definitions": {
-        "author.Request": {
+        "app.Response": {
             "type": "object",
             "properties": {
-                "fullName": {
-                    "type": "string"
+                "highlight": {
+                    "type": "boolean"
                 },
-                "pseudonym": {
-                    "type": "string"
-                },
-                "specialty": {
+                "status": {
                     "type": "string"
                 }
             }
         },
-        "author.Response": {
+        "autopayment.Request": {
             "type": "object",
             "properties": {
-                "fullName": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "pseudonym": {
-                    "type": "string"
-                },
-                "specialty": {
+                "status": {
                     "type": "string"
                 }
             }
         },
-        "book.Request": {
+        "autopayment.Response": {
             "type": "object",
             "properties": {
-                "authors": {
+                "highlight": {
+                    "type": "boolean"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "client.Request": {
+            "type": "object",
+            "properties": {
+                "app": {
+                    "type": "string"
+                },
+                "channel": {
+                    "type": "string"
+                },
+                "contracts": {
                     "type": "array",
                     "items": {
-                        "type": "string"
+                        "$ref": "#/definitions/contract.Request"
                     }
                 },
-                "genre": {
+                "email": {
                     "type": "string"
                 },
-                "id": {
-                    "type": "string"
+                "is_active": {
+                    "type": "boolean"
                 },
-                "isbn": {
+                "last_login": {
                     "type": "string"
                 },
                 "name": {
                     "type": "string"
+                },
+                "source": {
+                    "type": "string"
+                },
+                "stage": {
+                    "type": "string"
                 }
             }
         },
-        "book.Response": {
+        "client.Response": {
             "type": "object",
             "properties": {
-                "authors": {
+                "app": {
+                    "$ref": "#/definitions/app.Response"
+                },
+                "channel": {
+                    "type": "string"
+                },
+                "contracts": {
                     "type": "array",
                     "items": {
-                        "type": "string"
+                        "$ref": "#/definitions/contract.Response"
                     }
                 },
-                "genre": {
+                "current_stage": {
+                    "type": "string"
+                },
+                "email": {
                     "type": "string"
                 },
                 "id": {
                     "type": "string"
                 },
-                "isbn": {
+                "isActive": {
+                    "type": "boolean"
+                },
+                "last_login": {
+                    "$ref": "#/definitions/lastLogin.Response"
+                },
+                "last_updated": {
                     "type": "string"
                 },
                 "name": {
                     "type": "string"
-                }
-            }
-        },
-        "member.Request": {
-            "type": "object",
-            "properties": {
-                "books": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
                 },
-                "fullName": {
+                "registration_date": {
                     "type": "string"
                 },
-                "id": {
+                "source": {
                     "type": "string"
                 }
             }
         },
-        "member.Response": {
+        "contract.Request": {
             "type": "object",
             "properties": {
-                "books": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
+                "amount": {
+                    "type": "number"
                 },
-                "fullName": {
+                "auto_payment": {
+                    "$ref": "#/definitions/autopayment.Request"
+                },
+                "conclusion_date": {
+                    "type": "string"
+                },
+                "expiration_date": {
                     "type": "string"
                 },
                 "id": {
                     "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "number": {
+                    "type": "string"
+                },
+                "payment_frequency": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "contract.Response": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "number"
+                },
+                "auto_payment": {
+                    "$ref": "#/definitions/autopayment.Response"
+                },
+                "conclusion_date": {
+                    "type": "string"
+                },
+                "expiration_date": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "number": {
+                    "type": "string"
+                },
+                "payment_frequency": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "lastLogin.Response": {
+            "type": "object",
+            "properties": {
+                "date": {
+                    "type": "string"
+                },
+                "highlight": {
+                    "type": "boolean"
                 }
             }
         },
@@ -840,9 +292,7 @@
                 "message": {
                     "type": "string"
                 },
-                "success": {
-                    "type": "boolean"
-                }
+                "meta": {}
             }
         }
     }

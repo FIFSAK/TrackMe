@@ -26,11 +26,11 @@ type Response struct {
 // ParseFromEntity converts a auto payment entity to a response payload.
 func ParseFromEntity(data Entity) Response {
 	highlight := false
-	if *data.Status == "disabled" {
+	if data.Status == "disabled" {
 		highlight = true
 	}
 	return Response{
-		Status:    *data.Status,
+		Status:    data.Status,
 		Highlight: highlight,
 	}
 }

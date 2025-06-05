@@ -1,28 +1,23 @@
 package app
 
 import (
+	"TrackMe/internal/config"
+	"TrackMe/internal/handler"
+	"TrackMe/internal/repository"
+	"TrackMe/internal/service/track"
+	"TrackMe/pkg/log"
+	"TrackMe/pkg/server"
 	"context"
+	"errors"
 	"flag"
 	"fmt"
-
+	"github.com/golang-migrate/migrate/v4"
+	_ "go.mongodb.org/mongo-driver/bson"
+	"go.uber.org/zap"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
-
-	"go.uber.org/zap"
-
-	"TrackMe/internal/cache"
-	"TrackMe/internal/config"
-	"TrackMe/internal/handler"
-	"TrackMe/internal/provider/currency"
-	"TrackMe/internal/repository"
-	"TrackMe/internal/service/auth"
-	"TrackMe/internal/service/library"
-	"TrackMe/internal/service/payment"
-	"TrackMe/internal/service/subscription"
-	"TrackMe/pkg/log"
-	"TrackMe/pkg/server"
 )
 
 // Run initializes whole application
@@ -35,68 +30,30 @@ func Run() {
 		return
 	}
 
-	currencyClient := currency.New(currency.Credentials{
-		URL: configs.CURRENCY.URL,
-	})
+	if err = runMigrations(configs.MONGO.DSN); err != nil {
+		logger.Error("ERR_RUN_MIGRATIONS", zap.Error(err))
+		return
+	}
 
 	repositories, err := repository.New(
-		repository.WithMemoryStore())
+		repository.WithMongoStore(configs.MONGO.DSN, "name"))
 	if err != nil {
 		logger.Error("ERR_INIT_REPOSITORIES", zap.Error(err))
 		return
 	}
 	defer repositories.Close()
 
-	caches, err := cache.New(
-		cache.Dependencies{
-			AuthorRepository: repositories.Author,
-			BookRepository:   repositories.Book,
-		},
-		cache.WithMemoryStore())
-	if err != nil {
-		logger.Error("ERR_INIT_CACHES", zap.Error(err))
-		return
-	}
-	defer caches.Close()
-
-	authService, err := auth.New()
-	if err != nil {
-		logger.Error("ERR_INIT_AUTH_SERVICE", zap.Error(err))
-		return
-	}
-
-	paymentService, err := payment.New(
-		payment.WithCurrencyClient(currencyClient))
-	if err != nil {
-		logger.Error("ERR_INIT_PAYMENT_SERVICE", zap.Error(err))
-		return
-	}
-
-	libraryService, err := library.New(
-		library.WithAuthorRepository(repositories.Author),
-		library.WithBookRepository(repositories.Book),
-		library.WithAuthorCache(caches.Author),
-		library.WithBookCache(caches.Book))
+	trackService, err := track.New(
+		track.WithClientRepository(repositories.Client))
 	if err != nil {
 		logger.Error("ERR_INIT_LIBRARY_SERVICE", zap.Error(err))
 		return
 	}
 
-	subscriptionService, err := subscription.New(
-		subscription.WithMemberRepository(repositories.Member),
-		subscription.WithLibraryService(libraryService))
-	if err != nil {
-		logger.Error("ERR_INIT_SUBSCRIPTION_SERVICE", zap.Error(err))
-		return
-	}
-
 	handlers, err := handler.New(
 		handler.Dependencies{
-			Configs:             configs,
-			AuthService:         authService,
-			PaymentService:      paymentService,
-			LibraryService:      libraryService,
-			SubscriptionService: subscriptionService,
+			Configs:      configs,
+			TrackService: trackService,
 		},
 		handler.WithHTTPHandler())
 	if err != nil {
@@ -145,4 +102,32 @@ func Run() {
 	// Your cleanup tasks go here
 
 	fmt.Println("server was successful shutdown.")
+}
+
+// runMigrations applies MongoDB migrations from the migrations directory
+func runMigrations(dsn string) error {
+	migrationPath := "file://migrations/mongo"
+	m, err := migrate.New(migrationPath, dsn)
+	if err != nil {
+		return fmt.Errorf("failed to create migration instance: %w", err)
+	}
+
+	// Check for dirty database state
+	version, dirty, err := m.Version()
+	if err != nil && !errors.Is(err, migrate.ErrNilVersion) {
+		return fmt.Errorf("failed to get migration version: %w", err)
+	}
+
+	// Force the version if the database is in a dirty state
+	if dirty {
+		if err = m.Force(int(version)); err != nil {
+			return fmt.Errorf("failed to force migration version: %w", err)
+		}
+	}
+
+	if err = m.Up(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
+		return fmt.Errorf("failed to apply migrations: %w", err)
+	}
+
+	return nil
 }

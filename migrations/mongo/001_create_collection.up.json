@@ -91,70 +91,68 @@
       }
     }
   },
-  [
-    {
-      "createIndexes": "client",
-      "indexes": [
-        {
-          "key": {
-            "current_stage": 1
-          },
-          "name": "current_stage_index"
+  {
+    "createIndexes": "clients",
+    "indexes": [
+      {
+        "key": {
+          "current_stage": 1
         },
-        {
-          "key": {
-            "last_updated": 1
-          },
-          "name": "last_updated_index"
+        "name": "current_stage_index"
+      },
+      {
+        "key": {
+          "last_updated": 1
         },
-        {
-          "key": {
-            "is_active": 1
-          },
-          "name": "is_active_index"
+        "name": "last_updated_index"
+      },
+      {
+        "key": {
+          "is_active": 1
         },
-        {
-          "key": {
-            "source": 1
-          },
-          "name": "source_index"
+        "name": "is_active_index"
+      },
+      {
+        "key": {
+          "source": 1
         },
-        {
-          "key": {
-            "channel": 1
-          },
-          "name": "channel_index"
+        "name": "source_index"
+      },
+      {
+        "key": {
+          "channel": 1
         },
-        {
-          "key": {
-            "app": 1
-          },
-          "name": "app_status_index"
+        "name": "channel_index"
+      },
+      {
+        "key": {
+          "app": 1
         },
-        {
-          "key": {
-            "last_login": 1
-          },
-          "name": "last_login_date_index"
-        }
-      ]
-    },
-    {
-      "createIndexes": "metric",
-      "indexes": [
-        {
-          "key": {
-            "type": 1
-          },
-          "name": "type_index"
+        "name": "app_status_index"
+      },
+      {
+        "key": {
+          "last_login": 1
         },
-        {
-          "key": {
-            "interval": 1
-          },
-          "name": "interval_index"
-        }
-      ]
-    }
-  ]
+        "name": "last_login_date_index"
+      }
+    ]
+  },
+  {
+    "createIndexes": "metrics",
+    "indexes": [
+      {
+        "key": {
+          "type": 1
+        },
+        "name": "type_index"
+      },
+      {
+        "key": {
+          "interval": 1
+        },
+        "name": "interval_index"
+      }
+    ]
+  }
 ]

@@ -1,27 +1,21 @@
 package handler
 
 import (
-	"TrackMe/internal/service/payment"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
-	"github.com/go-chi/oauth"
 	httpSwagger "github.com/swaggo/http-swagger/v2"
 
 	"TrackMe/docs"
 	"TrackMe/internal/config"
 	"TrackMe/internal/handler/http"
-	"TrackMe/internal/service/auth"
-	"TrackMe/internal/service/library"
-	"TrackMe/internal/service/subscription"
+
+	"TrackMe/internal/service/track"
 	"TrackMe/pkg/server/router"
 )
 
 type Dependencies struct {
-	Configs             config.Configs
-	AuthService         *auth.Service
-	PaymentService      *payment.Service
-	LibraryService      *library.Service
-	SubscriptionService *subscription.Service
+	Configs      config.Configs
+	TrackService *track.Service
 }
 
 // Configuration is an alias for a function that will take in a pointer to a Handler and modify it
@@ -61,31 +55,18 @@ func WithHTTPHandler() Configuration {
 
 		h.HTTP.Use(middleware.Timeout(h.dependencies.Configs.APP.Timeout))
 
+		basePath := h.dependencies.Configs.APP.Path
+
 		// Init swagger handler
 		docs.SwaggerInfo.BasePath = h.dependencies.Configs.APP.Path
 		h.HTTP.Get("/swagger/*", httpSwagger.WrapHandler)
 
-		// Init auth handler
-		authHandler := oauth.NewBearerServer(
-			h.dependencies.Configs.TOKEN.Salt,
-			h.dependencies.Configs.TOKEN.Expires,
-			h.dependencies.AuthService, nil)
-
-		h.HTTP.Post("/token", authHandler.UserCredentials)
-		h.HTTP.Post("/auth", authHandler.ClientCredentials)
-
 		// Init service handlers
-		authorHandler := http.NewAuthorHandler(h.dependencies.LibraryService)
-		bookHandler := http.NewBookHandler(h.dependencies.LibraryService)
-		memberHandler := http.NewMemberHandler(h.dependencies.SubscriptionService)
+		clientHandler := http.NewClientHandler(h.dependencies.TrackService)
 
-		h.HTTP.Route("/", func(r chi.Router) {
-			// use the Bearer Authentication middleware
-			r.Use(oauth.Authorize(h.dependencies.Configs.TOKEN.Salt, nil))
+		h.HTTP.Route(basePath+"/", func(r chi.Router) {
+			r.Mount("/clients", clientHandler.Routes())
 
-			r.Mount("/clients", authorHandler.Routes())
-			r.Mount("/books", bookHandler.Routes())
-			r.Mount("/members", memberHandler.Routes())
 		})
 
 		return

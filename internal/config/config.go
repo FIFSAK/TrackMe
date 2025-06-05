@@ -3,24 +3,18 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"strconv"
 	"time"
 
 	"github.com/joho/godotenv"
 	"github.com/kelseyhightower/envconfig"
 )
 
-const (
-	defaultAppMode    = "dev"
-	defaultAppPort    = "8080"
-	defaultAppPath    = "/"
-	defaultAppTimeout = 60 * time.Second
-)
-
 type (
 	Configs struct {
 		APP      AppConfig
 		CURRENCY ClientConfig
-		POSTGRES StoreConfig
+		MONGO    StoreConfig
 	}
 
 	AppConfig struct {
@@ -48,13 +42,17 @@ func New() (cfg Configs, err error) {
 	if err != nil {
 		return
 	}
-	godotenv.Load(filepath.Join(root, ".env"))
+	err = godotenv.Load(filepath.Join(root, ".env"))
+	if err != nil {
+		return Configs{}, err
+	}
+	appTimeout, err := strconv.Atoi(os.Getenv("APP_TIMEOUT"))
 
 	cfg.APP = AppConfig{
-		Mode:    defaultAppMode,
-		Port:    defaultAppPort,
-		Path:    defaultAppPath,
-		Timeout: defaultAppTimeout,
+		Mode:    os.Getenv("APP_MODE"),
+		Port:    os.Getenv("APP_PORT"),
+		Path:    os.Getenv("APP_PATH"),
+		Timeout: time.Duration(appTimeout),
 	}
 
 	if err = envconfig.Process("APP", &cfg.APP); err != nil {
@@ -65,7 +63,7 @@ func New() (cfg Configs, err error) {
 		return
 	}
 
-	if err = envconfig.Process("POSTGRES", &cfg.POSTGRES); err != nil {
+	if err = envconfig.Process("MONGO", &cfg.MONGO); err != nil {
 		return
 	}
 

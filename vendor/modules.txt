@@ -7,8 +7,8 @@ github.com/ajg/form
 # github.com/armon/go-radix v1.0.0
 ## explicit
 github.com/armon/go-radix
-# github.com/cenkalti/backoff/v4 v4.1.2
-## explicit; go 1.13
+# github.com/cenkalti/backoff/v4 v4.3.0
+## explicit; go 1.18
 github.com/cenkalti/backoff/v4
 # github.com/cespare/xxhash/v2 v2.3.0
 ## explicit; go 1.11
@@ -61,8 +61,8 @@ github.com/go-openapi/swag
 # github.com/gofrs/uuid v4.0.0+incompatible
 ## explicit
 github.com/gofrs/uuid
-# github.com/golang-migrate/migrate/v4 v4.18.2
-## explicit; go 1.22.0
+# github.com/golang-migrate/migrate/v4 v4.18.3
+## explicit; go 1.23.0
 github.com/golang-migrate/migrate/v4
 github.com/golang-migrate/migrate/v4/database
 github.com/golang-migrate/migrate/v4/database/mongodb
@@ -72,7 +72,7 @@ github.com/golang-migrate/migrate/v4/internal/url
 github.com/golang-migrate/migrate/v4/source
 github.com/golang-migrate/migrate/v4/source/file
 github.com/golang-migrate/migrate/v4/source/iofs
-# github.com/golang/snappy v0.0.4
+# github.com/golang/snappy v1.0.0
 ## explicit
 github.com/golang/snappy
 # github.com/google/uuid v1.6.0
@@ -103,12 +103,13 @@ github.com/josharian/intern
 # github.com/kelseyhightower/envconfig v1.4.0
 ## explicit
 github.com/kelseyhightower/envconfig
-# github.com/klauspost/compress v1.16.7
-## explicit; go 1.18
+# github.com/klauspost/compress v1.18.0
+## explicit; go 1.22
 github.com/klauspost/compress
 github.com/klauspost/compress/fse
 github.com/klauspost/compress/huff0
 github.com/klauspost/compress/internal/cpuinfo
+github.com/klauspost/compress/internal/le
 github.com/klauspost/compress/internal/snapref
 github.com/klauspost/compress/zstd
 github.com/klauspost/compress/zstd/internal/xxhash
@@ -122,6 +123,10 @@ github.com/lib/pq/scram
 github.com/mailru/easyjson/buffer
 github.com/mailru/easyjson/jlexer
 github.com/mailru/easyjson/jwriter
+# github.com/mattn/go-colorable v0.1.14
+## explicit; go 1.18
+# github.com/mattn/go-isatty v0.0.20
+## explicit; go 1.15
 # github.com/montanaflynn/stats v0.7.1
 ## explicit; go 1.13
 github.com/montanaflynn/stats
@@ -144,6 +149,8 @@ github.com/redis/go-redis/v9/internal/pool
 github.com/redis/go-redis/v9/internal/proto
 github.com/redis/go-redis/v9/internal/rand
 github.com/redis/go-redis/v9/internal/util
+# github.com/rs/zerolog v1.34.0
+## explicit; go 1.15
 # github.com/santhosh-tekuri/jsonschema v1.2.4
 ## explicit
 github.com/santhosh-tekuri/jsonschema
@@ -251,8 +258,8 @@ go.mongodb.org/mongo-driver/x/mongo/driver/operation
 go.mongodb.org/mongo-driver/x/mongo/driver/session
 go.mongodb.org/mongo-driver/x/mongo/driver/topology
 go.mongodb.org/mongo-driver/x/mongo/driver/wiremessage
-# go.uber.org/atomic v1.7.0
-## explicit; go 1.13
+# go.uber.org/atomic v1.11.0
+## explicit; go 1.18
 go.uber.org/atomic
 # go.uber.org/multierr v1.10.0
 ## explicit; go 1.19
@@ -268,8 +275,8 @@ go.uber.org/zap/internal/exit
 go.uber.org/zap/internal/pool
 go.uber.org/zap/internal/stacktrace
 go.uber.org/zap/zapcore
-# golang.org/x/crypto v0.31.0
-## explicit; go 1.20
+# golang.org/x/crypto v0.38.0
+## explicit; go 1.23.0
 golang.org/x/crypto/ocsp
 golang.org/x/crypto/pbkdf2
 golang.org/x/crypto/scrypt
@@ -283,25 +290,26 @@ golang.org/x/mod/internal/lazyregexp
 golang.org/x/mod/modfile
 golang.org/x/mod/module
 golang.org/x/mod/semver
-# golang.org/x/net v0.33.0
-## explicit; go 1.18
+# golang.org/x/net v0.38.0
+## explicit; go 1.23.0
 golang.org/x/net/http/httpguts
 golang.org/x/net/http2
 golang.org/x/net/http2/hpack
 golang.org/x/net/idna
+golang.org/x/net/internal/httpcommon
 golang.org/x/net/internal/timeseries
 golang.org/x/net/trace
-# golang.org/x/sync v0.10.0
-## explicit; go 1.18
+# golang.org/x/sync v0.14.0
+## explicit; go 1.23.0
 golang.org/x/sync/errgroup
 golang.org/x/sync/singleflight
-# golang.org/x/sys v0.28.0
-## explicit; go 1.18
+# golang.org/x/sys v0.33.0
+## explicit; go 1.23.0
 golang.org/x/sys/unix
 golang.org/x/sys/windows
 golang.org/x/sys/windows/registry
-# golang.org/x/text v0.21.0
-## explicit; go 1.18
+# golang.org/x/text v0.25.0
+## explicit; go 1.23.0
 golang.org/x/text/secure/bidirule
 golang.org/x/text/transform
 golang.org/x/text/unicode/bidi

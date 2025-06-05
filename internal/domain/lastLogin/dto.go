@@ -27,11 +27,11 @@ type Response struct {
 // ParseFromEntity converts a client entity to a response payload.
 func ParseFromEntity(data Entity) Response {
 	highlight := false
-	if time.Since(*data.Date) > 30*24*time.Hour {
+	if time.Since(data.Date) > 30*24*time.Hour {
 		highlight = true
 	}
 	return Response{
-		Date:      *data.Date,
+		Date:      data.Date,
 		Highlight: highlight,
 	}
 }
