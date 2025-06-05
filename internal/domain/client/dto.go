@@ -48,7 +48,7 @@ type Response struct {
 	Name             string              `json:"name"`
 	Email            string              `json:"email"`
 	CurrentStage     string              `json:"current_stage"`
-	RegistrationDate time.Time           `json:"registration_date"`
+	RegistrationDate string              `json:"registration_date"`
 	LastUpdated      time.Time           `json:"last_updated"`
 	IsActive         bool                `json:"isActive"`
 	Source           string              `json:"source"`
@@ -60,18 +60,24 @@ type Response struct {
 
 // ParseFromEntity converts a client entity to a response payload.
 func ParseFromEntity(data Entity) Response {
-	appEntity := app.Entity{Status: data.App}
-	lastLoginEntity := lastLogin.Entity{Date: data.LastLogin}
+	appEntity := app.Entity{Status: *data.App}
+	parsedRegistrationDate := data.RegistrationDate.Format(time.RFC3339)
+	if *data.App == "installed" {
+		parsedRegistrationDate = data.RegistrationDate.UTC().Format("02.01.2006")
+	}
+	lastLoginEntity := lastLogin.Entity{
+		Date: *data.LastLogin,
+	}
 	return Response{
 		ID:               data.ID,
-		Name:             data.Name,
-		Email:            data.Email,
-		CurrentStage:     data.CurrentStage,
-		RegistrationDate: data.RegistrationDate,
-		LastUpdated:      data.LastUpdated,
-		IsActive:         data.IsActive,
-		Source:           data.Source,
-		Channel:          data.Channel,
+		Name:             *data.Name,
+		Email:            *data.Email,
+		CurrentStage:     *data.CurrentStage,
+		RegistrationDate: parsedRegistrationDate,
+		LastUpdated:      *data.LastUpdated,
+		IsActive:         *data.IsActive,
+		Source:           *data.Source,
+		Channel:          *data.Channel,
 		App:              app.ParseFromEntity(appEntity),
 		LastLogin:        lastLogin.ParseFromEntity(lastLoginEntity),
 		Contracts:        contract.ParseFromEntities(data.Contracts),

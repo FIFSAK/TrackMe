@@ -1,6 +1,6 @@
 package app
 
-// Entity represents a app in the system.
+// Entity represents an app in the system.
 type Entity struct {
 	Status string `db:"status" bson:"status"`
 }

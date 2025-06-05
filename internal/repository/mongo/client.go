@@ -158,7 +158,7 @@ func prepareUpdateFields(data client.Entity) bson.M {
 		"name":          data.Name,
 		"email":         data.Email,
 		"current_stage": data.CurrentStage,
-		"last_updated":  time.Now(), // Always update this field
+		"last_updated":  time.Now(),
 		"is_active":     data.IsActive,
 		"source":        data.Source,
 		"channel":       data.Channel,
@@ -192,28 +192,28 @@ func (r *ClientRepository) Delete(ctx context.Context, id string) error {
 // prepareArgs prepares the update arguments for the MongoDB query.
 func (r *ClientRepository) prepareArgs(data client.Entity) bson.M {
 	args := bson.M{}
-	if data.Name != "" {
+	if data.Name != nil {
 		args["name"] = data.Name
 	}
-	if data.Email != "" {
+	if data.Email != nil {
 		args["email"] = data.Email
 	}
-	if data.CurrentStage != "" {
+	if data.CurrentStage != nil {
 		args["current_stage"] = data.CurrentStage
 	}
-	//if data.RegistrationDate !=  {
-	//	args["registration_date"] = data.RegistrationDate
-	//}
-	//if data.LastUpdated !=  {
-	//	args["last_updated"] = data.LastUpdated
-	//}
-	//if data.IsActive !=  {
-	//	args["is_active"] = data.IsActive
-	//}
-	if data.Source != "" {
+	if data.RegistrationDate != nil {
+		args["registration_date"] = data.RegistrationDate
+	}
+	if data.LastUpdated != nil {
+		args["last_updated"] = data.LastUpdated
+	}
+	if data.IsActive != nil {
+		args["is_active"] = data.IsActive
+	}
+	if data.Source != nil {
 		args["source"] = data.Source
 	}
-	if data.Channel != "" {
+	if data.Channel != nil {
 		args["channel"] = data.Channel
 	}
 	return args

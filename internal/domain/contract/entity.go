@@ -1,6 +1,9 @@
 package contract
 
-import autopayment "TrackMe/internal/domain/autopayment"
+import (
+	autopayment "TrackMe/internal/domain/autopayment"
+	"time"
+)
 
 // Entity represents a contract in the system.
 type Entity struct {
@@ -17,10 +20,10 @@ type Entity struct {
 	Status *string `db:"status" bson:"status"`
 
 	// ConclusionDate is the date of payment and contract signing (ISO 8601 format).
-	ConclusionDate *string `db:"conclusion_date" bson:"conclusion_date"`
+	ConclusionDate *time.Time `db:"conclusion_date" bson:"conclusion_date"`
 
 	// ExpirationDate is the expiration date of the contract (ISO 8601 format).
-	ExpirationDate *string `db:"expiration_date" bson:"expiration_date"`
+	ExpirationDate *time.Time `db:"expiration_date" bson:"expiration_date"`
 
 	// Amount is the payment amount for the contract (numeric, in currency).
 	Amount *float64 `db:"amount" bson:"amount"`

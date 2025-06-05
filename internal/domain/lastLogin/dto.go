@@ -20,8 +20,8 @@ func (s *Request) Bind(r *http.Request) error {
 
 // Response represents the response payload for client operations.
 type Response struct {
-	Date      time.Time `json:"date"`
-	Highlight bool      `json:"highlight"`
+	Date      string `json:"date"`
+	Highlight bool   `json:"highlight"`
 }
 
 // ParseFromEntity converts a client entity to a response payload.
@@ -30,8 +30,9 @@ func ParseFromEntity(data Entity) Response {
 	if time.Since(data.Date) > 30*24*time.Hour {
 		highlight = true
 	}
+
 	return Response{
-		Date:      data.Date,
+		Date:      data.Date.UTC().Format("02.01.2006"),
 		Highlight: highlight,
 	}
 }

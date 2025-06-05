@@ -4,6 +4,7 @@ import (
 	autopayment "TrackMe/internal/domain/autopayment"
 	"errors"
 	"net/http"
+	"time"
 )
 
 // Request represents the request payload for contract operations.
@@ -12,8 +13,8 @@ type Request struct {
 	Name             string              `json:"name"`
 	Number           string              `json:"number"`
 	Status           string              `json:"status"`
-	ConclusionDate   string              `json:"conclusion_date"`
-	ExpirationDate   string              `json:"expiration_date"`
+	ConclusionDate   time.Time           `json:"conclusion_date"`
+	ExpirationDate   time.Time           `json:"expiration_date"`
 	Amount           float64             `json:"amount"`
 	PaymentFrequency string              `json:"payment_frequency"`
 	AutoPayment      autopayment.Request `json:"auto_payment"`
@@ -30,10 +31,10 @@ func (req *Request) Bind(r *http.Request) error {
 	if req.Status == "" {
 		return errors.New("status: cannot be blank")
 	}
-	if req.ConclusionDate == "" {
+	if req.ConclusionDate == (time.Time{}) {
 		return errors.New("conclusion_date: cannot be blank")
 	}
-	if req.ExpirationDate == "" {
+	if req.ExpirationDate == (time.Time{}) {
 		return errors.New("expiration_date: cannot be blank")
 	}
 	if req.PaymentFrequency == "" {
@@ -48,8 +49,8 @@ type Response struct {
 	Name             string               `json:"name"`
 	Number           string               `json:"number"`
 	Status           string               `json:"status"`
-	ConclusionDate   string               `json:"conclusion_date"`
-	ExpirationDate   string               `json:"expiration_date"`
+	ConclusionDate   time.Time            `json:"conclusion_date"`
+	ExpirationDate   time.Time            `json:"expiration_date"`
 	Amount           float64              `json:"amount"`
 	PaymentFrequency string               `json:"payment_frequency"`
 	AutoPayment      autopayment.Response `json:"auto_payment"`
