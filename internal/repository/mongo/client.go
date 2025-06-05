@@ -50,11 +50,10 @@ func (r *ClientRepository) List(ctx context.Context, filters client.Filters, lim
 	}
 
 	if filters.AppStatus != "" {
-		filter["app.status"] = filters.AppStatus
+		filter["app"] = filters.AppStatus
 	}
 
-	// Only add is_active filter if it was explicitly set
-	if filters.IsActive {
+	if filters.IsActive != nil {
 		filter["is_active"] = filters.IsActive
 	}
 
@@ -63,7 +62,7 @@ func (r *ClientRepository) List(ctx context.Context, filters client.Filters, lim
 	}
 
 	if !filters.LastLoginAfter.IsZero() {
-		filter["last_login.date"] = bson.M{"$gte": filters.LastLoginAfter}
+		filter["last_login"] = bson.M{"$gte": filters.LastLoginAfter}
 	}
 
 	// Add debugging to see what filter is being applied
@@ -154,12 +153,16 @@ func (r *ClientRepository) Update(ctx context.Context, id string, data client.En
 }
 
 func prepareUpdateFields(data client.Entity) bson.M {
+	isActiveDefault := true
+	if data.IsActive != nil {
+		isActiveDefault = *data.IsActive
+	}
 	fields := bson.M{
 		"name":          data.Name,
 		"email":         data.Email,
 		"current_stage": data.CurrentStage,
 		"last_updated":  time.Now(),
-		"is_active":     data.IsActive,
+		"is_active":     isActiveDefault,
 		"source":        data.Source,
 		"channel":       data.Channel,
 		"app":           data.App,

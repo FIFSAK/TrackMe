@@ -15,7 +15,7 @@ type Filters struct {
 	Source         string
 	Channel        string
 	AppStatus      string
-	IsActive       bool
+	IsActive       *bool
 	UpdatedAfter   time.Time
 	LastLoginAfter time.Time
 }
@@ -23,7 +23,7 @@ type Request struct {
 	Name      string             `json:"name"`
 	Email     string             `json:"email"`
 	Stage     string             `json:"stage"`
-	IsActive  bool               `json:"is_active"`
+	IsActive  *bool              `json:"is_active"`
 	Source    string             `json:"source"`
 	Channel   string             `json:"channel"`
 	App       string             `json:"app"`
@@ -50,7 +50,7 @@ type Response struct {
 	CurrentStage     string              `json:"current_stage"`
 	RegistrationDate string              `json:"registration_date"`
 	LastUpdated      time.Time           `json:"last_updated"`
-	IsActive         bool                `json:"isActive"`
+	IsActive         bool                `json:"is_active"`
 	Source           string              `json:"source"`
 	Channel          string              `json:"channel"`
 	App              app.Response        `json:"app"`

@@ -38,13 +38,24 @@ func (h *ClientHandler) Routes() chi.Router {
 	return r
 }
 
-// @Summary	list of clients from the repository
-// @Tags		clients
-// @Accept		json
-// @Produce	json
-// @Success	200			{array}		client.Response
-// @Failure	500			{object}	response.Object
-// @Router		/clients 	[get]
+// @Summary    List clients with filtering and pagination
+// @Description Get a list of clients with optional filtering and pagination
+// @Tags        clients
+// @Accept      json
+// @Produce     json
+// @Param       id query string false "Filter by client ID"
+// @Param       stage query string false "Filter by client stage"
+// @Param       source query string false "Filter by source"
+// @Param       channel query string false "Filter by channel"
+// @Param       app query string false "Filter by app status"
+// @Param       is_active query boolean false "Filter by active status (default: true)"
+// @Param       updated query string false "Filter by last updated after date (YYYY-MM-DD)"
+// @Param       last_login query string false "Filter by last login date after (YYYY-MM-DD)"
+// @Param       limit query integer false "Pagination limit (default 50)"
+// @Param       offset query integer false "Pagination offset (default 0)"
+// @Success     200 {array} client.Response
+// @Failure     500 {object} response.Object
+// @Router      /clients [get]
 func (h *ClientHandler) list(w http.ResponseWriter, r *http.Request) {
 	filters := client.Filters{
 		ID:        r.URL.Query().Get("id"),
@@ -94,15 +105,15 @@ func (h *ClientHandler) list(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func parseBool(s string, defaultVal bool) bool {
+func parseBool(s string, defaultVal bool) *bool {
 	if s == "" {
-		return defaultVal
+		return &defaultVal
 	}
 	b, err := strconv.ParseBool(s)
 	if err != nil {
-		return defaultVal
+		return &defaultVal
 	}
-	return b
+	return &b
 }
 
 // @Summary Update client

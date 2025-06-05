@@ -17,6 +17,7 @@ const docTemplate = `{
     "paths": {
         "/clients": {
             "get": {
+                "description": "Get a list of clients with optional filtering and pagination",
                 "consumes": [
                     "application/json"
                 ],
@@ -26,7 +27,69 @@ const docTemplate = `{
                 "tags": [
                     "clients"
                 ],
-                "summary": "list of clients from the repository",
+                "summary": "List clients with filtering and pagination",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Filter by client ID",
+                        "name": "id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by client stage",
+                        "name": "stage",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by source",
+                        "name": "source",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by channel",
+                        "name": "channel",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by app status",
+                        "name": "app",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Filter by active status (default: true)",
+                        "name": "is_active",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by last updated after date (YYYY-MM-DD)",
+                        "name": "updated",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by last login date after (YYYY-MM-DD)",
+                        "name": "last_login",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Pagination limit (default 50)",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Pagination offset (default 0)",
+                        "name": "offset",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -201,7 +264,7 @@ const docTemplate = `{
                 "id": {
                     "type": "string"
                 },
-                "isActive": {
+                "is_active": {
                     "type": "boolean"
                 },
                 "last_login": {

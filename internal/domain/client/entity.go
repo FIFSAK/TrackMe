@@ -50,11 +50,16 @@ func New(req Request) Entity {
 	for i, c := range req.Contracts {
 		contracts[i] = contract.New(c)
 	}
+	isActive := true
+
+	if req.IsActive != nil {
+		isActive = *req.IsActive
+	}
 	return Entity{
 		Name:         &req.Name,
 		Email:        &req.Email,
 		CurrentStage: &req.Stage,
-		IsActive:     &req.IsActive,
+		IsActive:     &isActive,
 		Source:       &req.Source,
 		Channel:      &req.Channel,
 		App:          &req.App,
