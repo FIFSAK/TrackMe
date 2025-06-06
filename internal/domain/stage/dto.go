@@ -19,15 +19,6 @@ func (req *Request) Bind(r *http.Request) error {
 	if req.ID == "" {
 		return errors.New("id: cannot be blank")
 	}
-	if req.Name == "" {
-		return errors.New("name: cannot be blank")
-	}
-	if req.Order <= 0 {
-		return errors.New("order: must be greater than zero")
-	}
-	if req.LastUpdated == "" {
-		return errors.New("last_updated: cannot be blank")
-	}
 	return nil
 }
 

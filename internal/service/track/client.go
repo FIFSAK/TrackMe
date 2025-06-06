@@ -6,7 +6,6 @@ import (
 	"TrackMe/pkg/store"
 	"context"
 	"errors"
-	"fmt"
 	"go.uber.org/zap"
 )
 
@@ -85,31 +84,24 @@ func (s *Service) UpdateClient(ctx context.Context, id string, req client.Reques
 	if existing.RegistrationDate != nil {
 		updated.RegistrationDate = existing.RegistrationDate
 	}
+	var newStage string
 
 	if req.Stage != "" {
-		var newStage string
-
-		switch req.Stage {
-		case "next", "prev":
-			if existing.CurrentStage == nil {
-				return client.Response{}, fmt.Errorf("cannot transition %s from empty stage", req.Stage)
-			}
-			if s.StageRepository == nil {
-				return client.Response{}, fmt.Errorf("stage repository is not initialized")
-			}
-
-			newStage, err = s.StageRepository.UpdateStage(ctx, *existing.CurrentStage, req.Stage)
-			if err != nil {
-				logger.Error("invalid stage transition",
-					zap.String("from", *existing.CurrentStage),
-					zap.String("direction", req.Stage),
-					zap.Error(err))
-				return client.Response{}, err
-			}
+		if existing.CurrentStage == nil {
+			logger.Error("invalid stage transition", zap.String("direction", req.Stage))
+			return client.Response{}, errors.New("invalid stage transition: no current stage")
 		}
-
-		updated.CurrentStage = &newStage
 	}
+	newStage, err = s.StageRepository.UpdateStage(ctx, *existing.CurrentStage, req.Stage)
+	if err != nil {
+		logger.Error("invalid stage transition",
+			zap.String("from", *existing.CurrentStage),
+			zap.String("direction", req.Stage),
+			zap.Error(err))
+		return client.Response{}, errors.New("invalid stage transition: " + err.Error())
+	}
+
+	updated.CurrentStage = &newStage
 
 	result, err := s.clientRepository.Update(ctx, id, updated)
 	if err != nil {

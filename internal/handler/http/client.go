@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -142,6 +143,9 @@ func (h *ClientHandler) update(w http.ResponseWriter, r *http.Request) {
 		switch {
 		case errors.Is(err, store.ErrorNotFound):
 			response.NotFound(w, r, err)
+		case strings.Contains(err.Error(), "invalid stage transition"):
+			response.BadRequest(w, r, err, req.Stage)
+
 		default:
 			response.InternalServerError(w, r, err)
 		}

@@ -120,9 +120,6 @@ func (r *StageRepository) Delete(ctx context.Context, id string) error {
 
 // UpdateStage returns the next or previous stage ID based on the given option
 func (r *StageRepository) UpdateStage(ctx context.Context, currentStageID, direction string) (string, error) {
-	if direction != "next" && direction != "prev" {
-		return "", fmt.Errorf("invalid direction: %s", direction)
-	}
 
 	currentStage, ok := r.db.Load(currentStageID)
 	if !ok {
@@ -132,7 +129,14 @@ func (r *StageRepository) UpdateStage(ctx context.Context, currentStageID, direc
 	if !ok {
 		return "", fmt.Errorf("current stage not found or invalid type: %s", currentStageID)
 	}
+	if direction != "next" && direction != "prev" {
+		newStage, ok := r.db.Load(direction)
+		if !ok {
+			return "", fmt.Errorf("invalid direction: %s", direction)
+		}
+		return newStage.(stage.Entity).ID, nil
 
+	}
 	if direction == "next" {
 		nextStage, err := r.Get(ctx, currentStageEntity.AllowedTransitions[1])
 		if err != nil {

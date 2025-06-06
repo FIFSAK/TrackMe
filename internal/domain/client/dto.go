@@ -33,9 +33,6 @@ type Request struct {
 
 // Bind validates the request payload.
 func (s *Request) Bind(r *http.Request) error {
-	if s.Name == "" {
-		return errors.New("name: cannot be blank")
-	}
 	if s.Stage == "" {
 		return errors.New("current_stage: cannot be blank")
 	}
