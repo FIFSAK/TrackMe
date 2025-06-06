@@ -6,6 +6,7 @@ import (
 	"TrackMe/pkg/store"
 	"context"
 	"errors"
+	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
 
@@ -78,24 +79,25 @@ func (s *Service) UpdateClient(ctx context.Context, id string, req client.Reques
 		return client.Response{}, err
 	}
 
+	if len(req.Contracts) > 0 {
+		for i, contract := range req.Contracts {
+			if contract.ID == "" {
+				req.Contracts[i].ID = uuid.New().String()
+			}
+		}
+	}
+
 	updated := client.New(req)
 	updated.ID = id
 
 	if existing.RegistrationDate != nil {
 		updated.RegistrationDate = existing.RegistrationDate
 	}
-	var newStage string
 
-	if req.Stage != "" {
-		if existing.CurrentStage == nil {
-			logger.Error("invalid stage transition", zap.String("direction", req.Stage))
-			return client.Response{}, errors.New("invalid stage transition: no current stage")
-		}
-	}
-	newStage, err = s.StageRepository.UpdateStage(ctx, *existing.CurrentStage, req.Stage)
+	newStage, err := s.StageRepository.UpdateStage(ctx, *updated.CurrentStage, req.Stage)
 	if err != nil {
 		logger.Error("invalid stage transition",
-			zap.String("from", *existing.CurrentStage),
+			zap.String("from", *updated.CurrentStage),
 			zap.String("direction", req.Stage),
 			zap.Error(err))
 		return client.Response{}, errors.New("invalid stage transition: " + err.Error())

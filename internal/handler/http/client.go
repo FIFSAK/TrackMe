@@ -137,6 +137,14 @@ func (h *ClientHandler) update(w http.ResponseWriter, r *http.Request) {
 		response.BadRequest(w, r, err, req)
 		return
 	}
+	if len(req.Contracts) > 0 {
+		for _, contract := range req.Contracts {
+			if err := contract.Bind(r); err != nil {
+				response.BadRequest(w, r, err, req)
+				return
+			}
+		}
+	}
 
 	clientResp, err := h.trackService.UpdateClient(r.Context(), id, req)
 	if err != nil {

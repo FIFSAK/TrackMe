@@ -1,7 +1,6 @@
 package contract
 
 import (
-	autopayment "TrackMe/internal/domain/autopayment"
 	"time"
 )
 
@@ -32,7 +31,7 @@ type Entity struct {
 	PaymentFrequency *string `db:"payment_frequency" bson:"payment_frequency"`
 
 	// AutoPayment indicates the status of auto-payment (enabled/disabled).
-	AutoPayment autopayment.Entity `db:"auto_payment" bson:"auto_payment"`
+	AutoPayment *string `db:"autopayment" bson:"autopayment"`
 }
 
 // New creates a new Contract instance.
@@ -46,6 +45,6 @@ func New(req Request) Entity {
 		ExpirationDate:   &req.ExpirationDate,
 		Amount:           &req.Amount,
 		PaymentFrequency: &req.PaymentFrequency,
-		AutoPayment:      autopayment.New(req.AutoPayment),
+		AutoPayment:      &req.AutoPayment,
 	}
 }
