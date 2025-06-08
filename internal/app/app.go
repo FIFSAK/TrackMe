@@ -44,7 +44,7 @@ func Run() {
 	defer repositories.Close()
 
 	trackService, err := track.New(
-		track.WithClientRepository(repositories.Client), track.WithStageRepository(repositories.Stage))
+		track.WithClientRepository(repositories.Client), track.WithStageRepository(repositories.Stage), track.WithMetricRepository(repositories.Metric))
 	if err != nil {
 		logger.Error("ERR_INIT_LIBRARY_SERVICE", zap.Error(err))
 		return

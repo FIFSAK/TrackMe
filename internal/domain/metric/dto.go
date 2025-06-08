@@ -5,6 +5,11 @@ import (
 	"net/http"
 )
 
+type Filters struct {
+	Type     string
+	Interval string
+}
+
 // Request represents the request payload for metric operations.
 type Request struct {
 	Type      string  `json:"type"`

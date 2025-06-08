@@ -2,6 +2,7 @@ package track
 
 import (
 	"TrackMe/internal/domain/client"
+	"TrackMe/internal/domain/metric"
 	"TrackMe/internal/domain/stage"
 )
 
@@ -12,6 +13,7 @@ type Configuration func(s *Service) error
 type Service struct {
 	clientRepository client.Repository
 	StageRepository  stage.Repository
+	MetricRepository metric.Repository
 	clientCache      client.Cache
 }
 
@@ -47,6 +49,16 @@ func WithStageRepository(stageRepository stage.Repository) Configuration {
 	// You need to return this so that the parent function can take in all the needed parameters
 	return func(s *Service) error {
 		s.StageRepository = stageRepository
+		return nil
+	}
+}
+
+// WithMetricRepository With MetricRepository applies a given metric repository to the Service
+func WithMetricRepository(metricRepository metric.Repository) Configuration {
+	// return a function that matches the Configuration alias,
+	// You need to return this so that the parent function can take in all the needed parameters
+	return func(s *Service) error {
+		s.MetricRepository = metricRepository
 		return nil
 	}
 }

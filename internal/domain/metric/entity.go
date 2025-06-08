@@ -21,7 +21,6 @@ type Entity struct {
 // New creates a new Metric instance.
 func New(req Request) Entity {
 	return Entity{
-		ID:        req.ID,
 		Type:      &req.Type,
 		Value:     &req.Value,
 		Interval:  &req.Interval,

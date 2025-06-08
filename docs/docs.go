@@ -172,6 +172,57 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/metrics": {
+            "get": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "metrics"
+                ],
+                "summary": "Get metrics with filtering",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Filter by metric type",
+                        "name": "type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by time interval (day, week, month)",
+                        "name": "interval",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/metric.Response"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/response.Object"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/response.Object"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
@@ -181,14 +232,6 @@ const docTemplate = `{
                 "highlight": {
                     "type": "boolean"
                 },
-                "status": {
-                    "type": "string"
-                }
-            }
-        },
-        "autopayment.Request": {
-            "type": "object",
-            "properties": {
                 "status": {
                     "type": "string"
                 }
@@ -290,8 +333,8 @@ const docTemplate = `{
                 "amount": {
                     "type": "number"
                 },
-                "auto_payment": {
-                    "$ref": "#/definitions/autopayment.Request"
+                "autopayment": {
+                    "type": "string"
                 },
                 "conclusion_date": {
                     "type": "string"
@@ -322,7 +365,7 @@ const docTemplate = `{
                 "amount": {
                     "type": "number"
                 },
-                "auto_payment": {
+                "autopayment": {
                     "$ref": "#/definitions/autopayment.Response"
                 },
                 "conclusion_date": {
@@ -356,6 +399,23 @@ const docTemplate = `{
                 },
                 "highlight": {
                     "type": "boolean"
+                }
+            }
+        },
+        "metric.Response": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "interval": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                },
+                "value": {
+                    "type": "number"
                 }
             }
         },

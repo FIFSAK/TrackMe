@@ -2,6 +2,7 @@ package repository
 
 import (
 	"TrackMe/internal/domain/client"
+	"TrackMe/internal/domain/metric"
 	"TrackMe/internal/domain/stage"
 	"TrackMe/internal/repository/memory"
 	"TrackMe/internal/repository/mongo"
@@ -17,6 +18,7 @@ type Repository struct {
 	postgres store.SQLX
 	Stage    stage.Repository
 	Client   client.Repository
+	Metric   metric.Repository
 }
 
 // New takes a variable amount of Configuration functions and returns a new Repository
@@ -69,6 +71,8 @@ func WithMongoStore(uri, name string) Configuration {
 		database := s.mongo.Client.Database(name)
 
 		s.Client = mongo.NewClientRepository(database)
+
+		s.Metric = mongo.NewMetricRepository(database)
 
 		return
 	}

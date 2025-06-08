@@ -6,11 +6,6 @@ definitions:
       status:
         type: string
     type: object
-  autopayment.Request:
-    properties:
-      status:
-        type: string
-    type: object
   autopayment.Response:
     properties:
       highlight:
@@ -74,8 +69,8 @@ definitions:
     properties:
       amount:
         type: number
-      auto_payment:
-        $ref: '#/definitions/autopayment.Request'
+      autopayment:
+        type: string
       conclusion_date:
         type: string
       expiration_date:
@@ -95,7 +90,7 @@ definitions:
     properties:
       amount:
         type: number
-      auto_payment:
+      autopayment:
         $ref: '#/definitions/autopayment.Response'
       conclusion_date:
         type: string
@@ -118,6 +113,17 @@ definitions:
         type: string
       highlight:
         type: boolean
+    type: object
+  metric.Response:
+    properties:
+      created_at:
+        type: string
+      interval:
+        type: string
+      type:
+        type: string
+      value:
+        type: number
     type: object
   response.Object:
     properties:
@@ -233,4 +239,37 @@ paths:
       summary: Update client
       tags:
       - clients
+  /metrics:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: Filter by metric type
+        in: query
+        name: type
+        type: string
+      - description: Filter by time interval (day, week, month)
+        in: query
+        name: interval
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/metric.Response'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/response.Object'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/response.Object'
+      summary: Get metrics with filtering
+      tags:
+      - metrics
 swagger: "2.0"

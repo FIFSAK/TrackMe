@@ -63,10 +63,11 @@ func WithHTTPHandler() Configuration {
 
 		// Init service handlers
 		clientHandler := http.NewClientHandler(h.dependencies.TrackService)
+		metricHandler := http.NewMetricHandler(h.dependencies.TrackService)
 
 		h.HTTP.Route(basePath+"/", func(r chi.Router) {
 			r.Mount("/clients", clientHandler.Routes())
-
+			r.Mount("/metrics", metricHandler.Routes())
 		})
 
 		return
