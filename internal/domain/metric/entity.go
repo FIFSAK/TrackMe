@@ -32,12 +32,12 @@ type Entity struct {
 	Value *float64 `db:"value" bson:"value"`
 
 	// TimeInterval is the time range for the metric (e.g., day, week, month).
-	Interval *string `db:"interval" bson:"interval"`
+	Interval *string `db:"interval,omitempty" bson:"interval,omitempty"`
 
 	// CreatedAt is the creation date of the metric.
 	CreatedAt *time.Time `db:"created_at" bson:"created_at"`
 
-	Metadata map[string]string `db:"metadata" bson:"metadata,omitempty"`
+	Metadata map[string]string `db:"metadata,omitempty" bson:"metadata,omitempty"`
 }
 
 // New creates a new Metric instance.

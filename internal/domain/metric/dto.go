@@ -15,7 +15,7 @@ type Filters struct {
 type Request struct {
 	Type      string    `json:"type"`
 	Value     float64   `json:"value"`
-	Interval  string    `json:"interval"`
+	Interval  string    `json:"interval,omitempty"`
 	CreatedAt time.Time `json:"created_at"`
 }
 
@@ -38,7 +38,7 @@ type Response struct {
 	ID        string            `json:"id"`
 	Type      string            `json:"type"`
 	Value     float64           `json:"value"`
-	Interval  string            `json:"interval"`
+	Interval  string            `json:"interval,omitempty"`
 	CreatedAt time.Time         `json:"created_at"`
 	Metadata  map[string]string `json:"metadata,omitempty"`
 }

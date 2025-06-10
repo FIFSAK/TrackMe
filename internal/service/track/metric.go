@@ -32,211 +32,9 @@ func (s *Service) ListMetrics(ctx context.Context, filters metric.Filters) ([]me
 	return responses, nil
 }
 
-// AggregateWeeklyMetrics aggregates daily metrics into weekly metrics
-func (s *Service) AggregateWeeklyMetrics(ctx context.Context, timestamp time.Time) error {
-	logger := zap.L().Named("service.track.metric.weekly")
-
-	year, week := timestamp.ISOWeek()
-	startOfWeek := firstDayOfISOWeek(year, week, timestamp.Location())
-	endOfWeek := startOfWeek.AddDate(0, 0, 7)
-
-	logger.Info("Aggregating weekly metrics",
-		zap.Time("startOfWeek", startOfWeek),
-		zap.Time("endOfWeek", endOfWeek))
-
-	dailyMetrics, err := s.MetricRepository.List(ctx, metric.Filters{
-		Interval: "day",
-	})
-	if err != nil {
-		return fmt.Errorf("failed to get daily metrics for weekly aggregation: %w", err)
-	}
-
-	weekMetrics := make([]metric.Entity, 0)
-	for _, m := range dailyMetrics {
-		if m.CreatedAt != nil && !m.CreatedAt.Before(startOfWeek) && m.CreatedAt.Before(endOfWeek) {
-			weekMetrics = append(weekMetrics, m)
-		}
-	}
-
-	groupedMetrics := make(map[string][]metric.Entity)
-	for _, m := range weekMetrics {
-		key := string(*m.Type)
-
-		if m.Metadata != nil {
-			for k, v := range m.Metadata {
-				key += ":" + k + ":" + v
-			}
-		}
-
-		groupedMetrics[key] = append(groupedMetrics[key], m)
-	}
-
-	for _, metrics := range groupedMetrics {
-		var total float64
-		var count int
-		var metaData map[string]string
-		var metricType metric.Type
-
-		if len(metrics) > 0 {
-			metricType = *metrics[0].Type
-			metaData = metrics[0].Metadata
-		}
-
-		for _, m := range metrics {
-			if m.Value != nil {
-				total += *m.Value
-				count++
-			}
-		}
-
-		var weeklyValue float64
-		if count > 0 {
-			weeklyValue = total / float64(count)
-		}
-
-		weeklyMetric, err := s.createMetric(
-			metricType,
-			weeklyValue,
-			"week",
-			endOfWeek,
-			metaData,
-		)
-		if err != nil {
-			logger.Error("Failed to create weekly metric",
-				zap.String("type", string(metricType)),
-				zap.Error(err))
-			continue
-		}
-
-		if _, err := s.MetricRepository.Add(ctx, weeklyMetric); err != nil {
-			logger.Error("Failed to store weekly metric",
-				zap.String("type", string(metricType)),
-				zap.Error(err))
-		}
-	}
-
-	return nil
-}
-
-// AggregateMonthlyMetrics aggregates daily metrics into monthly metrics
-func (s *Service) AggregateMonthlyMetrics(ctx context.Context, timestamp time.Time) error {
-	logger := zap.L().Named("service.track.metric.monthly")
-
-	startOfMonth := time.Date(timestamp.Year(), timestamp.Month(), 1, 0, 0, 0, 0, timestamp.Location())
-	endOfMonth := startOfMonth.AddDate(0, 1, 0)
-
-	logger.Info("Aggregating monthly metrics",
-		zap.Time("startOfMonth", startOfMonth),
-		zap.Time("endOfMonth", endOfMonth))
-
-	dailyMetrics, err := s.MetricRepository.List(ctx, metric.Filters{
-		Interval: "day",
-	})
-	if err != nil {
-		return fmt.Errorf("failed to get daily metrics for monthly aggregation: %w", err)
-	}
-
-	// Filter metrics from this month manually
-	monthMetrics := make([]metric.Entity, 0)
-	for _, m := range dailyMetrics {
-		if m.CreatedAt != nil && !m.CreatedAt.Before(startOfMonth) && m.CreatedAt.Before(endOfMonth) {
-			monthMetrics = append(monthMetrics, m)
-		}
-	}
-
-	groupedMetrics := make(map[string][]metric.Entity)
-	for _, m := range monthMetrics {
-		key := string(*m.Type)
-
-		if m.Metadata != nil {
-			for k, v := range m.Metadata {
-				key += ":" + k + ":" + v
-			}
-		}
-
-		groupedMetrics[key] = append(groupedMetrics[key], m)
-	}
-
-	for _, metrics := range groupedMetrics {
-		var total float64
-		var count int
-		var metaData map[string]string
-		var metricType metric.Type
-
-		if len(metrics) > 0 {
-			metricType = *metrics[0].Type
-			metaData = metrics[0].Metadata
-		}
-
-		for _, m := range metrics {
-			if m.Value != nil {
-				total += *m.Value
-				count++
-			}
-		}
-
-		var monthlyValue float64
-		if count > 0 {
-			monthlyValue = total / float64(count)
-		}
-
-		monthlyMetric, err := s.createMetric(
-			metricType,
-			monthlyValue,
-			"month",
-			endOfMonth,
-			metaData,
-		)
-		if err != nil {
-			logger.Error("Failed to create monthly metric",
-				zap.String("type", string(metricType)),
-				zap.Error(err))
-			continue
-		}
-
-		if _, err := s.MetricRepository.Add(ctx, monthlyMetric); err != nil {
-			logger.Error("Failed to store monthly metric",
-				zap.String("type", string(metricType)),
-				zap.Error(err))
-		}
-	}
-
-	return nil
-}
-
-func firstDayOfISOWeek(year, week int, loc *time.Location) time.Time {
-	jan1 := time.Date(year, 1, 1, 0, 0, 0, 0, loc)
-
-	dayOfWeek := int(jan1.Weekday())
-	if dayOfWeek == 0 {
-		dayOfWeek = 7
-	}
-
-	daysToAdd := 1 - dayOfWeek
-	firstMonday := jan1.AddDate(0, 0, daysToAdd)
-
-	if dayOfWeek > 4 {
-		firstMonday = firstMonday.AddDate(0, 0, 7)
-	}
-
-	return firstMonday.AddDate(0, 0, 7*(week-1))
-}
-
-func (s *Service) CalculateAllMetrics(ctx context.Context) error {
+func (s *Service) CalculateAllMetrics(ctx context.Context, interval string) error {
 	logger := zap.L().Named("service.track.metric")
 	now := time.Now()
-	inactivePeriod := 30
-
-	// Существующие метрики
-	if err := s.calculateDAU(ctx, now); err != nil {
-		logger.Error("failed to calculate DAU", zap.Error(err))
-		return err
-	}
-
-	if err := s.calculateMAU(ctx, now); err != nil {
-		logger.Error("failed to calculate MAU", zap.Error(err))
-		return err
-	}
 
 	if err := s.calculateClientsPerStage(ctx, now); err != nil {
 		logger.Error("failed to calculate clients per stage", zap.Error(err))
@@ -248,12 +46,17 @@ func (s *Service) CalculateAllMetrics(ctx context.Context) error {
 		return err
 	}
 
-	if err := s.calculateDropout(ctx, now, inactivePeriod); err != nil {
+	if err := s.aggregateRollBackCount(ctx, now, interval); err != nil {
+		logger.Error("failed to aggregate rollback count", zap.Error(err))
+		return err
+	}
+
+	if err := s.calculateDropout(ctx, now, interval); err != nil {
 		logger.Error("failed to calculate dropout", zap.Error(err))
 		return err
 	}
 
-	if err := s.calculateConversion(ctx, now); err != nil {
+	if err := s.calculateConversion(ctx, now, interval); err != nil {
 		logger.Error("failed to calculate conversion", zap.Error(err))
 		return err
 	}
@@ -263,17 +66,30 @@ func (s *Service) CalculateAllMetrics(ctx context.Context) error {
 		return err
 	}
 
-	if err := s.calculateStatusUpdates(ctx, now); err != nil {
+	if err := s.calculateStatusUpdates(ctx, now, interval); err != nil {
 		logger.Error("failed to calculate status updates", zap.Error(err))
 		return err
 	}
 
-	if err := s.calculateSourceConversion(ctx, now); err != nil {
+	if interval == "day" {
+		if err := s.calculateDAU(ctx, now); err != nil {
+			logger.Error("failed to calculate DAU", zap.Error(err))
+			return err
+		}
+	}
+	if interval == "month" {
+		if err := s.calculateMAU(ctx, now); err != nil {
+			logger.Error("failed to calculate MAU", zap.Error(err))
+			return err
+		}
+	}
+
+	if err := s.calculateSourceConversion(ctx, now, interval); err != nil {
 		logger.Error("failed to calculate source conversion", zap.Error(err))
 		return err
 	}
 
-	if err := s.calculateChannelConversion(ctx, now); err != nil {
+	if err := s.calculateChannelConversion(ctx, now, interval); err != nil {
 		logger.Error("failed to calculate channel conversion", zap.Error(err))
 		return err
 	}
@@ -400,6 +216,142 @@ func (s *Service) calculateStageDuration(ctx context.Context, timestamp time.Tim
 	return nil
 }
 
+func (s *Service) aggregateRollBackCount(ctx context.Context, timestamp time.Time, interval string) error {
+	logger := zap.L().Named("service.track.metric").With(
+		zap.String("timestamp", timestamp.Format(time.RFC3339)),
+		zap.String("interval", interval),
+	)
+
+	// Verify the interval is valid
+	if interval != "week" && interval != "month" {
+		return fmt.Errorf("invalid interval: %s (valid values: week, month)", interval)
+	}
+
+	var startTime, endTime time.Time
+
+	if interval == "week" {
+		// Get the start and end of the week
+		year, week := timestamp.ISOWeek()
+		startTime = firstDayOfISOWeek(year, week, timestamp.Location())
+		endTime = startTime.AddDate(0, 0, 7)
+	} else {
+		// Get the start and end of the month
+		startTime = time.Date(timestamp.Year(), timestamp.Month(), 1, 0, 0, 0, 0, timestamp.Location())
+		endTime = startTime.AddDate(0, 1, 0)
+	}
+
+	logger.Info("Aggregating rollback count",
+		zap.Time("startTime", startTime),
+		zap.Time("endTime", endTime))
+
+	// Get all rollback count metrics for the period
+	dailyMetrics, err := s.MetricRepository.List(ctx, metric.Filters{
+		Type:     string(metric.RollbackCount),
+		Interval: "day",
+	})
+	if err != nil && !errors.Is(err, store.ErrorNotFound) {
+		return fmt.Errorf("failed to get rollback count metrics: %w", err)
+	}
+
+	// Filter metrics for the period
+	periodMetrics := make([]metric.Entity, 0)
+	for _, m := range dailyMetrics {
+		if !m.CreatedAt.Before(startTime) && m.CreatedAt.Before(endTime) {
+			periodMetrics = append(periodMetrics, m)
+		}
+	}
+
+	var totalRollbacks float64
+	for _, m := range periodMetrics {
+		totalRollbacks += *m.Value
+	}
+
+	logger.Info("Rollback count aggregation results",
+		zap.Int("metrics_count", len(periodMetrics)),
+		zap.Float64("total_rollbacks", totalRollbacks))
+
+	// Create and store aggregated metric
+	aggregatedMetric, err := s.createMetric(
+		metric.RollbackCount,
+		totalRollbacks,
+		interval,
+		endTime,
+		nil,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to create aggregated rollback count metric: %w", err)
+	}
+
+	// Check if we already have a metric for this period
+	existingMetrics, err := s.MetricRepository.List(ctx, metric.Filters{
+		Type:     string(metric.RollbackCount),
+		Interval: interval,
+	})
+	if err != nil && !errors.Is(err, store.ErrorNotFound) {
+		return fmt.Errorf("failed to check existing aggregated metrics: %w", err)
+	}
+
+	var found bool
+	for _, m := range existingMetrics {
+		var isInSamePeriod bool
+
+		if interval == "week" {
+			existingYear, existingWeek := m.CreatedAt.ISOWeek()
+			currentYear, currentWeek := timestamp.ISOWeek()
+			isInSamePeriod = existingYear == currentYear && existingWeek == currentWeek
+		} else {
+			isInSamePeriod = m.CreatedAt.Year() == timestamp.Year() &&
+				m.CreatedAt.Month() == timestamp.Month()
+		}
+
+		if isInSamePeriod {
+			found = true
+			if _, err := s.MetricRepository.Update(ctx, m.ID, aggregatedMetric); err != nil {
+				return fmt.Errorf("failed to update existing %s rollback count metric: %w", interval, err)
+			}
+			logger.Info(fmt.Sprintf("Updated existing %s rollback count metric", interval))
+			break
+		}
+	}
+
+	if !found {
+		if _, err := s.MetricRepository.Add(ctx, aggregatedMetric); err != nil {
+			return fmt.Errorf("failed to store %s rollback count metric: %w", interval, err)
+		}
+		logger.Info(fmt.Sprintf("Created new %s rollback count metric", interval))
+	}
+
+	return nil
+}
+
+// Helper function to get the first day of an ISO week
+func firstDayOfISOWeek(year, week int, loc *time.Location) time.Time {
+	// Get January 1 for the year
+	jan1 := time.Date(year, 1, 1, 0, 0, 0, 0, loc)
+
+	// Get the day of the week for January 1
+	dayOfWeek := int(jan1.Weekday())
+	if dayOfWeek == 0 {
+		// Sunday is 0, but ISO considers it 7
+		dayOfWeek = 7
+	}
+
+	// Days to add to get to the Monday of week 1
+	daysToAdd := 1 - dayOfWeek
+
+	// Monday of the first week
+	firstMonday := jan1.AddDate(0, 0, daysToAdd)
+
+	// If January 1 is after Thursday, it's part of week 1
+	// If not, it's part of the last week of the previous year
+	if dayOfWeek > 4 {
+		firstMonday = firstMonday.AddDate(0, 0, 7)
+	}
+
+	// Add the required number of weeks
+	return firstMonday.AddDate(0, 0, 7*(week-1))
+}
+
 func (s *Service) calculateRollbackCount(ctx context.Context, timestamp time.Time) error {
 	todayDate := timestamp.Format("2006-01-02")
 	rollBackCountMetrics, err := s.ListMetrics(ctx, metric.Filters{
@@ -440,7 +392,15 @@ func (s *Service) calculateRollbackCount(ctx context.Context, timestamp time.Tim
 	return nil
 }
 
-func (s *Service) calculateDropout(ctx context.Context, timestamp time.Time, inactivePeriod int) error {
+func (s *Service) calculateDropout(ctx context.Context, timestamp time.Time, interval string) error {
+	var inactivePeriod int
+	switch interval {
+	case "week":
+		inactivePeriod = 7
+	case "month":
+		inactivePeriod = 30
+	}
+
 	cutoffDate := timestamp.AddDate(0, 0, -inactivePeriod)
 
 	count, err := s.clientRepository.Count(ctx, bson.M{
@@ -457,10 +417,12 @@ func (s *Service) calculateDropout(ctx context.Context, timestamp time.Time, ina
 	return err
 }
 
-func (s *Service) calculateConversion(ctx context.Context, timestamp time.Time) error {
+func (s *Service) calculateConversion(ctx context.Context, timestamp time.Time, interval string) error {
+	logger := zap.L().Named("service.track.metric.conversion")
+
 	stages, err := s.StageRepository.List(ctx)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to list stages: %w", err)
 	}
 
 	if len(stages) < 1 {
@@ -469,25 +431,74 @@ func (s *Service) calculateConversion(ctx context.Context, timestamp time.Time) 
 
 	lastStage := stages[len(stages)-1].ID
 
-	lastStageCount, err := s.clientRepository.Count(ctx, bson.M{"current_stage": lastStage})
-	if err != nil {
-		return err
+	// Calculate time period based on interval
+	var startDate time.Time
+	switch interval {
+	case "day":
+		startDate = time.Date(timestamp.Year(), timestamp.Month(), timestamp.Day(), 0, 0, 0, 0, timestamp.Location())
+	case "week":
+		year, week := timestamp.ISOWeek()
+		startDate = firstDayOfISOWeek(year, week, timestamp.Location())
+	case "month":
+		startDate = time.Date(timestamp.Year(), timestamp.Month(), 1, 0, 0, 0, 0, timestamp.Location())
+	default:
+		return fmt.Errorf("invalid interval: %s", interval)
 	}
 
-	totalClientsCount, err := s.clientRepository.Count(ctx, bson.M{})
+	logger.Info("Calculating conversion rate",
+		zap.Time("start_date", startDate),
+		zap.Time("end_date", timestamp),
+		zap.String("interval", interval))
+
+	// Clients who reached last stage within the interval period
+	lastStageRecentCount, err := s.clientRepository.Count(ctx, bson.M{
+		"current_stage": lastStage,
+		"last_updated": bson.M{
+			"$gte": startDate,
+			"$lte": timestamp,
+		},
+	})
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to count clients on last stage with recent updates: %w", err)
+	}
+
+	// Total number of clients active in this period
+	totalClientsCount, err := s.clientRepository.Count(ctx, bson.M{
+		"last_updated": bson.M{
+			"$gte": startDate,
+			"$lte": timestamp,
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("failed to count total active clients: %w", err)
 	}
 
 	var conversionRate float64
 	if totalClientsCount > 0 {
-		conversionRate = float64(lastStageCount) / float64(totalClientsCount)
+		conversionRate = float64(lastStageRecentCount) / float64(totalClientsCount)
 	}
 
-	m, err := s.createMetric(metric.Conversion, conversionRate, "day", timestamp, nil)
+	logger.Info("Conversion calculation results",
+		zap.Int64("last_stage_count", lastStageRecentCount),
+		zap.Int64("total_count", totalClientsCount),
+		zap.Float64("conversion_rate", conversionRate))
 
-	_, err = s.MetricRepository.Add(ctx, m)
-	return err
+	m, err := s.createMetric(
+		metric.Conversion,
+		conversionRate,
+		interval,
+		timestamp,
+		nil,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to create conversion metric: %w", err)
+	}
+
+	if _, err = s.MetricRepository.Add(ctx, m); err != nil {
+		return fmt.Errorf("failed to store conversion metric: %w", err)
+	}
+
+	return nil
 }
 
 func (s *Service) calculateTotalDuration(ctx context.Context, timestamp time.Time) error {
@@ -525,27 +536,51 @@ func (s *Service) calculateTotalDuration(ctx context.Context, timestamp time.Tim
 		avgDurationDays = totalDuration.Hours() / 24 / float64(count)
 	}
 
-	m, err := s.createMetric(metric.TotalDuration, avgDurationDays, "day", timestamp, nil)
+	m, err := s.createMetric(metric.TotalDuration, avgDurationDays, "", timestamp, nil)
 
 	_, err = s.MetricRepository.Add(ctx, m)
 	return err
 }
 
-func (s *Service) calculateStatusUpdates(ctx context.Context, timestamp time.Time) error {
-	startOfDay := time.Date(timestamp.Year(), timestamp.Month(), timestamp.Day(), 0, 0, 0, 0, timestamp.Location())
-	endOfDay := startOfDay.AddDate(0, 0, 1)
+func (s *Service) calculateStatusUpdates(ctx context.Context, timestamp time.Time, interval string) error {
+	logger := zap.L().Named("service.track.metric.status_updates")
 
+	// Calculate time period based on interval
+	var startDate time.Time
+	switch interval {
+	case "day":
+		startDate = time.Date(timestamp.Year(), timestamp.Month(), timestamp.Day(), 0, 0, 0, 0, timestamp.Location())
+	case "week":
+		year, week := timestamp.ISOWeek()
+		startDate = firstDayOfISOWeek(year, week, timestamp.Location())
+	case "month":
+		startDate = time.Date(timestamp.Year(), timestamp.Month(), 1, 0, 0, 0, 0, timestamp.Location())
+	default:
+		return fmt.Errorf("invalid interval: %s", interval)
+	}
+
+	logger.Info("Calculating status updates",
+		zap.Time("start_date", startDate),
+		zap.Time("end_date", timestamp),
+		zap.String("interval", interval))
+
+	// Count clients updated within the specified period
 	count, err := s.clientRepository.Count(ctx, bson.M{
 		"last_updated": bson.M{
-			"$gte": startOfDay,
-			"$lt":  endOfDay,
+			"$gte": startDate,
+			"$lte": timestamp,
 		},
 	})
 	if err != nil {
 		return fmt.Errorf("failed to count status updates: %w", err)
 	}
 
-	m, err := s.createMetric(metric.StatusUpdates, float64(count), "day", timestamp, nil)
+	logger.Info("Status updates calculation results",
+		zap.Int64("count", count),
+		zap.String("interval", interval))
+
+	// Create and store the metric
+	m, err := s.createMetric(metric.StatusUpdates, float64(count), interval, timestamp, nil)
 	if err != nil {
 		return fmt.Errorf("failed to create status updates metric: %w", err)
 	}
@@ -557,7 +592,9 @@ func (s *Service) calculateStatusUpdates(ctx context.Context, timestamp time.Tim
 	return nil
 }
 
-func (s *Service) calculateSourceConversion(ctx context.Context, timestamp time.Time) error {
+func (s *Service) calculateSourceConversion(ctx context.Context, timestamp time.Time, interval string) error {
+	logger := zap.L().Named("service.track.metric.source_conversion")
+
 	stages, err := s.StageRepository.List(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to list stages: %w", err)
@@ -569,15 +606,38 @@ func (s *Service) calculateSourceConversion(ctx context.Context, timestamp time.
 
 	lastStage := stages[len(stages)-1].ID
 
+	// Calculate time period based on interval
+	var startDate time.Time
+	switch interval {
+	case "day":
+		startDate = time.Date(timestamp.Year(), timestamp.Month(), timestamp.Day(), 0, 0, 0, 0, timestamp.Location())
+	case "week":
+		year, week := timestamp.ISOWeek()
+		startDate = firstDayOfISOWeek(year, week, timestamp.Location())
+	case "month":
+		startDate = time.Date(timestamp.Year(), timestamp.Month(), 1, 0, 0, 0, 0, timestamp.Location())
+	default:
+		return fmt.Errorf("invalid interval: %s", interval)
+	}
+
+	logger.Info("Calculating source conversion",
+		zap.Time("start_date", startDate),
+		zap.Time("end_date", timestamp),
+		zap.String("interval", interval))
+
+	// Get clients active within the time period
 	clients, _, err := s.clientRepository.List(ctx, client.Filters{}, 0, 0)
 	if err != nil {
 		return fmt.Errorf("failed to list clients: %w", err)
 	}
 
+	// Collect unique sources
 	sourceMap := make(map[string]bool)
 	for _, c := range clients {
-		if c.Source != nil && *c.Source != "" {
-			sourceMap[*c.Source] = true
+		if c.Source != nil && *c.Source != "" && c.LastUpdated != nil {
+			if !c.LastUpdated.Before(startDate) && !c.LastUpdated.After(timestamp) {
+				sourceMap[*c.Source] = true
+			}
 		}
 	}
 
@@ -587,14 +647,26 @@ func (s *Service) calculateSourceConversion(ctx context.Context, timestamp time.
 	}
 
 	for _, source := range sources {
-		total, err := s.clientRepository.Count(ctx, bson.M{"source": source})
+		// Count total clients from this source active in the period
+		total, err := s.clientRepository.Count(ctx, bson.M{
+			"source": source,
+			"last_updated": bson.M{
+				"$gte": startDate,
+				"$lte": timestamp,
+			},
+		})
 		if err != nil {
 			return fmt.Errorf("failed to count clients with source %s: %w", source, err)
 		}
 
+		// Count completed clients from this source active in the period
 		completed, err := s.clientRepository.Count(ctx, bson.M{
 			"source":        source,
 			"current_stage": lastStage,
+			"last_updated": bson.M{
+				"$gte": startDate,
+				"$lte": timestamp,
+			},
 		})
 		if err != nil {
 			return fmt.Errorf("failed to count completed clients with source %s: %w", source, err)
@@ -605,10 +677,16 @@ func (s *Service) calculateSourceConversion(ctx context.Context, timestamp time.
 			conversionRate = float64(completed) / float64(total)
 		}
 
+		logger.Info("Source conversion calculation results",
+			zap.String("source", source),
+			zap.Int64("total", total),
+			zap.Int64("completed", completed),
+			zap.Float64("conversion_rate", conversionRate))
+
 		m, err := s.createMetric(
 			metric.SourceConversion,
 			conversionRate,
-			"day",
+			interval,
 			timestamp,
 			map[string]string{"source": source},
 		)
@@ -624,7 +702,9 @@ func (s *Service) calculateSourceConversion(ctx context.Context, timestamp time.
 	return nil
 }
 
-func (s *Service) calculateChannelConversion(ctx context.Context, timestamp time.Time) error {
+func (s *Service) calculateChannelConversion(ctx context.Context, timestamp time.Time, interval string) error {
+	logger := zap.L().Named("service.track.metric.channel_conversion")
+
 	stages, err := s.StageRepository.List(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to list stages: %w", err)
@@ -636,15 +716,38 @@ func (s *Service) calculateChannelConversion(ctx context.Context, timestamp time
 
 	lastStage := stages[len(stages)-1].ID
 
+	// Calculate time period based on interval
+	var startDate time.Time
+	switch interval {
+	case "day":
+		startDate = time.Date(timestamp.Year(), timestamp.Month(), timestamp.Day(), 0, 0, 0, 0, timestamp.Location())
+	case "week":
+		year, week := timestamp.ISOWeek()
+		startDate = firstDayOfISOWeek(year, week, timestamp.Location())
+	case "month":
+		startDate = time.Date(timestamp.Year(), timestamp.Month(), 1, 0, 0, 0, 0, timestamp.Location())
+	default:
+		return fmt.Errorf("invalid interval: %s", interval)
+	}
+
+	logger.Info("Calculating channel conversion",
+		zap.Time("start_date", startDate),
+		zap.Time("end_date", timestamp),
+		zap.String("interval", interval))
+
+	// Get clients active within the time period
 	clients, _, err := s.clientRepository.List(ctx, client.Filters{}, 0, 0)
 	if err != nil {
 		return fmt.Errorf("failed to list clients: %w", err)
 	}
 
+	// Collect unique channels from active clients in this period
 	channelMap := make(map[string]bool)
 	for _, c := range clients {
-		if c.Channel != nil && *c.Channel != "" {
-			channelMap[*c.Channel] = true
+		if c.Channel != nil && *c.Channel != "" && c.LastUpdated != nil {
+			if !c.LastUpdated.Before(startDate) && !c.LastUpdated.After(timestamp) {
+				channelMap[*c.Channel] = true
+			}
 		}
 	}
 
@@ -654,14 +757,26 @@ func (s *Service) calculateChannelConversion(ctx context.Context, timestamp time
 	}
 
 	for _, channel := range channels {
-		total, err := s.clientRepository.Count(ctx, bson.M{"channel": channel})
+		// Count total clients from this channel active in the period
+		total, err := s.clientRepository.Count(ctx, bson.M{
+			"channel": channel,
+			"last_updated": bson.M{
+				"$gte": startDate,
+				"$lte": timestamp,
+			},
+		})
 		if err != nil {
 			return fmt.Errorf("failed to count clients with channel %s: %w", channel, err)
 		}
 
+		// Count completed clients from this channel active in the period
 		completed, err := s.clientRepository.Count(ctx, bson.M{
 			"channel":       channel,
 			"current_stage": lastStage,
+			"last_updated": bson.M{
+				"$gte": startDate,
+				"$lte": timestamp,
+			},
 		})
 		if err != nil {
 			return fmt.Errorf("failed to count completed clients with channel %s: %w", channel, err)
@@ -672,10 +787,16 @@ func (s *Service) calculateChannelConversion(ctx context.Context, timestamp time
 			conversionRate = float64(completed) / float64(total)
 		}
 
+		logger.Info("Channel conversion calculation results",
+			zap.String("channel", channel),
+			zap.Int64("total", total),
+			zap.Int64("completed", completed),
+			zap.Float64("conversion_rate", conversionRate))
+
 		m, err := s.createMetric(
 			metric.ChannelConversion,
 			conversionRate,
-			"day",
+			interval,
 			timestamp,
 			map[string]string{"channel": channel},
 		)
