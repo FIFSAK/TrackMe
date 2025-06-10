@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"go.mongodb.org/mongo-driver/bson"
 )
 
 // Repository defines the interface for client repository operations.
@@ -20,4 +21,6 @@ type Repository interface {
 
 	// Delete removes a client entity by its ID.
 	Delete(ctx context.Context, id string) error
+
+	Count(ctx context.Context, filter bson.M) (int64, error)
 }

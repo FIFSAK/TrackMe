@@ -3,6 +3,7 @@ package metric
 import (
 	"errors"
 	"net/http"
+	"time"
 )
 
 type Filters struct {
@@ -12,10 +13,10 @@ type Filters struct {
 
 // Request represents the request payload for metric operations.
 type Request struct {
-	Type      string  `json:"type"`
-	Value     float64 `json:"value"`
-	Interval  string  `json:"interval"`
-	CreatedAt string  `json:"created_at"`
+	Type      string    `json:"type"`
+	Value     float64   `json:"value"`
+	Interval  string    `json:"interval"`
+	CreatedAt time.Time `json:"created_at"`
 }
 
 // Bind validates the request payload.
@@ -26,7 +27,7 @@ func (req *Request) Bind(r *http.Request) error {
 	if req.Interval == "" {
 		return errors.New("interval: cannot be blank")
 	}
-	if req.CreatedAt == "" {
+	if req.CreatedAt == (time.Time{}) {
 		return errors.New("created_at: cannot be blank")
 	}
 	return nil
@@ -34,19 +35,23 @@ func (req *Request) Bind(r *http.Request) error {
 
 // Response represents the response payload for metric operations.
 type Response struct {
-	Type      string  `json:"type"`
-	Value     float64 `json:"value"`
-	Interval  string  `json:"interval"`
-	CreatedAt string  `json:"created_at"`
+	ID        string            `json:"id"`
+	Type      string            `json:"type"`
+	Value     float64           `json:"value"`
+	Interval  string            `json:"interval"`
+	CreatedAt time.Time         `json:"created_at"`
+	Metadata  map[string]string `json:"metadata,omitempty"`
 }
 
 // ParseFromEntity converts a metric entity to a response payload.
 func ParseFromEntity(data Entity) Response {
 	return Response{
-		Type:      *data.Type,
+		ID:        data.ID,
+		Type:      string(*data.Type),
 		Value:     *data.Value,
 		Interval:  *data.Interval,
 		CreatedAt: *data.CreatedAt,
+		Metadata:  data.Metadata,
 	}
 }
 

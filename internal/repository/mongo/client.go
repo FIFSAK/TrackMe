@@ -221,3 +221,7 @@ func (r *ClientRepository) prepareArgs(data client.Entity) bson.M {
 	}
 	return args
 }
+
+func (r *ClientRepository) Count(ctx context.Context, filter bson.M) (int64, error) {
+	return r.db.CountDocuments(ctx, filter)
+}

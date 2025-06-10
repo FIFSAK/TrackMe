@@ -8,6 +8,7 @@ import (
 	"errors"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
+	"time"
 )
 
 // ListClients retrieves all clients from the repository.
@@ -104,6 +105,12 @@ func (s *Service) UpdateClient(ctx context.Context, id string, req client.Reques
 	}
 
 	updated.CurrentStage = &newStage
+	if req.Stage == "prev" {
+		err := s.calculateRollbackCount(ctx, time.Now())
+		if err != nil {
+			logger.Error("failed to calculate rollback count", zap.Error(err))
+		}
+	}
 
 	result, err := s.clientRepository.Update(ctx, id, updated)
 	if err != nil {

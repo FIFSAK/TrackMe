@@ -4,12 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"go.mongodb.org/mongo-driver/mongo/options"
-	"time"
-
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 
 	"TrackMe/internal/domain/metric"
 	"TrackMe/pkg/store"
@@ -89,8 +87,7 @@ func (r *MetricRepository) Update(ctx context.Context, id string, data metric.En
 	}
 
 	update := bson.M{
-		"$set":         data,
-		"$setOnInsert": bson.M{"registration_date": time.Now()},
+		"$set": data,
 	}
 
 	opts := options.FindOneAndUpdate().
