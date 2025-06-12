@@ -95,7 +95,7 @@ func (s *Service) UpdateClient(ctx context.Context, id string, req client.Reques
 		updated.RegistrationDate = existing.RegistrationDate
 	}
 
-	newStage, err := s.StageRepository.UpdateStage(ctx, *updated.CurrentStage, req.Stage)
+	newStage, err := s.StageRepository.UpdateStage(ctx, *existing.CurrentStage, req.Stage)
 	if err != nil {
 		logger.Error("invalid stage transition",
 			zap.String("from", *updated.CurrentStage),
@@ -108,7 +108,7 @@ func (s *Service) UpdateClient(ctx context.Context, id string, req client.Reques
 	if req.Stage == "prev" {
 		err := s.calculateRollbackCount(ctx, time.Now())
 		if err != nil {
-			logger.Error("failed to calculate rollback count", zap.Error(err))
+			return client.Response{}, err
 		}
 	}
 

@@ -8,6 +8,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	"time"
 
 	"TrackMe/internal/domain/metric"
 	"TrackMe/pkg/store"
@@ -58,7 +59,11 @@ func (r *MetricRepository) List(ctx context.Context, filters metric.Filters) ([]
 
 // Add inserts a new metric into the database.
 func (r *MetricRepository) Add(ctx context.Context, data metric.Entity) (string, error) {
-	res, err := r.db.InsertOne(ctx, data)
+	objId, err := primitive.ObjectIDFromHex(data.ID)
+	if err != nil {
+		return "", fmt.Errorf("invalid ID format: %w", err)
+	}
+	res, err := r.db.InsertOne(ctx, bson.M{"_id": objId, "type": data.Type, "value": data.Value, "interval": data.Interval, "created_at": data.CreatedAt, "updated_at": time.Now()})
 	if err != nil {
 		return "", err
 	}
@@ -86,8 +91,16 @@ func (r *MetricRepository) Update(ctx context.Context, id string, data metric.En
 		return metric.Entity{}, err
 	}
 
+	// Manually build update document excluding ID
 	update := bson.M{
-		"$set": data,
+		"$set": bson.M{
+			"type":       data.Type,
+			"value":      data.Value,
+			"interval":   data.Interval,
+			"created_at": data.CreatedAt,
+			"updated_at": time.Now(),
+			// Add other fields but NOT id/_id
+		},
 	}
 
 	opts := options.FindOneAndUpdate().
@@ -101,11 +114,9 @@ func (r *MetricRepository) Update(ctx context.Context, id string, data metric.En
 		update,
 		opts,
 	).Decode(&updated)
-
 	if err != nil {
 		return metric.Entity{}, err
 	}
-
 	return updated, nil
 }
 

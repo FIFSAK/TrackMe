@@ -1,0 +1,224 @@
+### Add client16 - registration stage
+PUT http://localhost/api/v1/clients/507f1f77bcf86cd799439032/stage
+Content-Type: application/json
+
+{
+  "stage": "registration",
+  "name": "Alexander White",
+  "email": "awhite@example.com",
+  "source": "website",
+  "channel": "organic",
+  "app": "not_installed",
+  "last_login": "2023-06-12T08:20:00Z",
+  "contracts": []
+}
+
+### Add client17 - data consent stage
+PUT http://localhost/api/v1/clients/507f1f77bcf86cd799439033/stage
+Content-Type: application/json
+
+{
+  "stage": "data_consent",
+  "name": "Katherine Jones",
+  "email": "kjones@example.com",
+  "source": "website",
+  "channel": "email_campaign",
+  "app": "installed",
+  "last_login": "2023-06-13T14:40:00Z",
+  "contracts": []
+}
+
+### Add client18 - form filling stage
+PUT http://localhost/api/v1/clients/507f1f77bcf86cd799439034/stage
+Content-Type: application/json
+
+{
+  "stage": "form_filling",
+  "name": "Daniel Martinez",
+  "email": "dmartinez@example.com",
+  "source": "search_engine",
+  "channel": "google_ads",
+  "app": "not_installed",
+  "last_login": "2023-06-14T11:15:00Z",
+  "contracts": []
+}
+
+### Add client19 - participants specification stage
+PUT http://localhost/api/v1/clients/507f1f77bcf86cd799439035/stage
+Content-Type: application/json
+
+{
+  "stage": "participants_specification",
+  "name": "Olivia Wilson",
+  "email": "owilson@example.com",
+  "source": "referral",
+  "channel": "friend",
+  "app": "installed",
+  "last_login": "2023-06-15T15:30:00Z",
+  "contracts": []
+}
+
+### Add client20 - terms agreement stage
+PUT http://localhost/api/v1/clients/507f1f77bcf86cd799439036/stage
+Content-Type: application/json
+
+{
+  "stage": "terms_agreement",
+  "name": "William Thompson",
+  "email": "wthompson@example.com",
+  "source": "partner",
+  "channel": "co_marketing",
+  "app": "installed",
+  "last_login": "2023-06-14T09:20:00Z",
+  "contracts": []
+}
+
+### Add client21 - client questionnaire stage
+PUT http://localhost/api/v1/clients/507f1f77bcf86cd799439037/stage
+Content-Type: application/json
+
+{
+  "stage": "client_questionnaire",
+  "name": "Sophia Anderson",
+  "email": "sanderson@example.com",
+  "source": "website",
+  "channel": "blog",
+  "app": "installed",
+  "last_login": "2023-06-16T10:45:00Z",
+  "contracts": []
+}
+
+### Add client22 - approval waiting stage
+PUT http://localhost/api/v1/clients/507f1f77bcf86cd799439038/stage
+Content-Type: application/json
+
+{
+  "stage": "approval_waiting",
+  "name": "James Davis",
+  "email": "jdavis@example.com",
+  "source": "search_engine",
+  "channel": "bing_ads",
+  "app": "not_installed",
+  "last_login": "2023-06-15T16:10:00Z",
+  "contracts": []
+}
+
+### Add client23 - modifications stage
+PUT http://localhost/api/v1/clients/507f1f77bcf86cd799439039/stage
+Content-Type: application/json
+
+{
+  "stage": "modifications",
+  "name": "Emma Wilson",
+  "email": "ewilson@example.com",
+  "source": "website",
+  "channel": "direct",
+  "app": "installed",
+  "last_login": "2023-06-16T13:25:00Z",
+  "contracts": []
+}
+
+### Add client24 - document signing stage
+PUT http://localhost/api/v1/clients/507f1f77bcf86cd799439040/stage
+Content-Type: application/json
+
+{
+  "stage": "document_signing",
+  "name": "Liam Johnson",
+  "email": "ljohnson@example.com",
+  "source": "event",
+  "channel": "webinar",
+  "app": "installed",
+  "last_login": "2023-06-16T09:50:00Z",
+  "contracts": []
+}
+
+### Add client25 - payment waiting stage
+PUT http://localhost/api/v1/clients/507f1f77bcf86cd799439041/stage
+Content-Type: application/json
+
+{
+  "stage": "payment_waiting",
+  "name": "Ava Robinson",
+  "email": "arobinson@example.com",
+  "source": "social_media",
+  "channel": "linkedin",
+  "app": "installed",
+  "last_login": "2023-06-15T11:30:00Z",
+  "contracts": []
+}
+
+### Move client16 to next stage (registration -> product_selection)
+PUT http://localhost/api/v1/clients/507f1f77bcf86cd799439032/stage
+Content-Type: application/json
+
+{
+  "stage": "product_selection",
+  "name": "Alexander White",
+  "email": "awhite@example.com",
+  "source": "website",
+  "channel": "organic",
+  "app": "installed",
+  "last_login": "2023-06-17T09:15:00Z",
+  "contracts": []
+}
+
+### Move client17 to previous stage (data_consent -> product_selection)
+PUT http://localhost/api/v1/clients/507f1f77bcf86cd799439033/stage
+Content-Type: application/json
+
+{
+  "stage": "prev",
+  "name": "Katherine Jones",
+  "email": "kjones@example.com",
+  "source": "website",
+  "channel": "email_campaign",
+  "app": "installed",
+  "last_login": "2023-06-17T10:20:00Z",
+  "contracts": []
+}
+
+### Move client18 to next stage (form_filling -> participants_specification)
+PUT http://localhost/api/v1/clients/507f1f77bcf86cd799439034/stage
+Content-Type: application/json
+
+{
+  "stage": "prev",
+  "name": "Daniel Martinez",
+  "email": "dmartinez@example.com",
+  "source": "search_engine",
+  "channel": "google_ads",
+  "app": "installed",
+  "last_login": "2023-06-17T14:25:00Z",
+  "contracts": []
+}
+
+### Move client19 to next stage (participants_specification -> terms_agreement)
+PUT http://localhost/api/v1/clients/507f1f77bcf86cd799439035/stage
+Content-Type: application/json
+
+{
+  "stage": "prev",
+  "name": "Olivia Wilson",
+  "email": "owilson@example.com",
+  "source": "referral",
+  "channel": "friend",
+  "app": "installed",
+  "last_login": "2023-06-17T16:10:00Z",
+  "contracts": []
+}
+
+### Move client22 to next stage (approval_waiting -> modifications)
+PUT http://localhost/api/v1/clients/507f1f77bcf86cd799439038/stage
+Content-Type: application/json
+
+{
+  "stage": "modifications",
+  "name": "James Davis",
+  "email": "jdavis@example.com",
+  "source": "search_engine",
+  "channel": "bing_ads",
+  "app": "installed",
+  "last_login": "2023-06-17T11:45:00Z",
+  "contracts": []
+}

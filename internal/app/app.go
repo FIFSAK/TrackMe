@@ -2,9 +2,11 @@ package app
 
 import (
 	"TrackMe/internal/config"
+	"TrackMe/internal/domain/prometheus"
 	"TrackMe/internal/handler"
 	"TrackMe/internal/repository"
 	"TrackMe/internal/service/track"
+	"TrackMe/internal/worker"
 	"TrackMe/pkg/log"
 	"TrackMe/pkg/server"
 	"context"
@@ -35,6 +37,7 @@ func Run() {
 		return
 	}
 
+	promMetrics := prometheus.New()
 	repositories, err := repository.New(
 		repository.WithMongoStore(configs.MONGO.DSN, "name"), repository.WithMemoryStore())
 	if err != nil {
@@ -44,7 +47,7 @@ func Run() {
 	defer repositories.Close()
 
 	trackService, err := track.New(
-		track.WithClientRepository(repositories.Client), track.WithStageRepository(repositories.Stage), track.WithMetricRepository(repositories.Metric))
+		track.WithClientRepository(repositories.Client), track.WithStageRepository(repositories.Stage), track.WithMetricRepository(repositories.Metric), track.WithPrometheusMetrics(promMetrics))
 	if err != nil {
 		logger.Error("ERR_INIT_LIBRARY_SERVICE", zap.Error(err))
 		return
@@ -67,6 +70,9 @@ func Run() {
 		logger.Error("ERR_INIT_SERVERS", zap.Error(err))
 		return
 	}
+
+	metricWorker := worker.NewMetricWorker(trackService)
+	metricWorker.Start()
 
 	// Run our server in a goroutine so that it doesn't block
 	if err = servers.Run(logger); err != nil {
@@ -92,6 +98,9 @@ func Run() {
 	// Create a deadline to wait for
 	ctx, cancel := context.WithTimeout(context.Background(), wait)
 	defer cancel()
+
+	// Stop the metric worker first
+	metricWorker.Stop()
 
 	// Doesn't block if no connections, but will otherwise wait until the timeout deadline
 	if err = servers.Stop(ctx); err != nil {

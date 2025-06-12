@@ -7,8 +7,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/gofrs/uuid"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.uber.org/zap"
 	"time"
 )
@@ -118,7 +118,7 @@ func (s *Service) calculateDAU(ctx context.Context, timestamp time.Time) error {
 	if err != nil {
 		return err
 	}
-	metric, err := s.createMetric(metric.DAU, float64(count), "day", timestamp, nil)
+	metric, err := s.createMetric("", metric.DAU, float64(count), "day", timestamp, nil)
 	if err != nil {
 		return err
 	}
@@ -128,6 +128,8 @@ func (s *Service) calculateDAU(ctx context.Context, timestamp time.Time) error {
 	if err != nil && !errors.Is(err, store.ErrorNotFound) {
 		return err
 	}
+
+	s.PrometheusMetrics.DAU.Set(float64(count))
 
 	return nil
 }
@@ -143,7 +145,7 @@ func (s *Service) calculateMAU(ctx context.Context, timestamp time.Time) error {
 	if err != nil {
 		return err
 	}
-	metric, err := s.createMetric(metric.MAU, float64(count), "day", timestamp, nil)
+	metric, err := s.createMetric("", metric.MAU, float64(count), "day", timestamp, nil)
 	if err != nil {
 		return err
 	}
@@ -151,6 +153,9 @@ func (s *Service) calculateMAU(ctx context.Context, timestamp time.Time) error {
 	if err != nil && !errors.Is(err, store.ErrorNotFound) {
 		return err
 	}
+
+	s.PrometheusMetrics.MAU.Set(float64(count))
+
 	return nil
 }
 
@@ -167,7 +172,7 @@ func (s *Service) calculateClientsPerStage(ctx context.Context, timestamp time.T
 		if err != nil {
 			return err
 		}
-		metric, err := s.createMetric(metric.ClientsPerStage, float64(count), "day", timestamp, map[string]string{"stage": stage.ID})
+		metric, err := s.createMetric("", metric.ClientsPerStage, float64(count), "day", timestamp, map[string]string{"stage": stage.ID})
 		if err != nil {
 			return err
 		}
@@ -176,6 +181,8 @@ func (s *Service) calculateClientsPerStage(ctx context.Context, timestamp time.T
 		if err != nil {
 			return err
 		}
+		s.PrometheusMetrics.ClientsPerStage.WithLabelValues(stage.ID).Set(float64(count))
+
 	}
 
 	return nil
@@ -203,7 +210,7 @@ func (s *Service) calculateStageDuration(ctx context.Context, timestamp time.Tim
 		}
 		avgDuration := total / time.Duration(len(durations))
 
-		metric, err := s.createMetric(metric.StageDuration, avgDuration.Hours(), "day", timestamp, map[string]string{"stage": stageID})
+		metric, err := s.createMetric("", metric.StageDuration, avgDuration.Hours(), "day", timestamp, map[string]string{"stage": stageID})
 		if err != nil {
 			return err
 		}
@@ -211,6 +218,9 @@ func (s *Service) calculateStageDuration(ctx context.Context, timestamp time.Tim
 		if _, err := s.MetricRepository.Add(ctx, metric); err != nil {
 			return err
 		}
+
+		s.PrometheusMetrics.StageDuration.WithLabelValues(stageID).Set(avgDuration.Hours())
+
 	}
 
 	return nil
@@ -271,7 +281,7 @@ func (s *Service) aggregateRollBackCount(ctx context.Context, timestamp time.Tim
 		zap.Float64("total_rollbacks", totalRollbacks))
 
 	// Create and store aggregated metric
-	aggregatedMetric, err := s.createMetric(
+	aggregatedMetric, err := s.createMetric("",
 		metric.RollbackCount,
 		totalRollbacks,
 		interval,
@@ -320,7 +330,6 @@ func (s *Service) aggregateRollBackCount(ctx context.Context, timestamp time.Tim
 		}
 		logger.Info(fmt.Sprintf("Created new %s rollback count metric", interval))
 	}
-
 	return nil
 }
 
@@ -368,18 +377,30 @@ func (s *Service) calculateRollbackCount(ctx context.Context, timestamp time.Tim
 	for _, m := range rollBackCountMetrics {
 		if m.CreatedAt.Format("2006-01-02") == todayDate {
 			found = true
+			newValue := m.Value + 1.0
 
-			updated, _ := s.createMetric(metricType, m.Value+1, "day", timestamp, nil)
+			interval := "day"
+			// Create a new entity without ID - the ID will be set by MongoDB update operation
+			updated := metric.Entity{
+				ID:        m.ID,
+				Type:      &metricType,
+				Value:     &newValue,
+				Interval:  &interval,
+				CreatedAt: &timestamp,
+				Metadata:  nil,
+			}
 
-			if _, err = s.MetricRepository.Update(ctx, m.ID, updated); err != nil {
+			if _, err = s.MetricRepository.Update(ctx, updated.ID, updated); err != nil {
 				return fmt.Errorf("failed to update rollback count: %w", err)
 			}
+			s.PrometheusMetrics.RollbackCount.Inc()
+
 			return nil
 		}
 	}
 
 	if !found {
-		newMetric, err := s.createMetric(metricType, 1.0, "day", timestamp, nil)
+		newMetric, err := s.createMetric("", metricType, 1.0, "day", timestamp, nil)
 		if err != nil {
 			return fmt.Errorf("failed to create rollback metric: %w", err)
 		}
@@ -387,7 +408,9 @@ func (s *Service) calculateRollbackCount(ctx context.Context, timestamp time.Tim
 		if _, err := s.MetricRepository.Add(ctx, newMetric); err != nil {
 			return fmt.Errorf("failed to store rollback metric: %w", err)
 		}
+
 	}
+	s.PrometheusMetrics.RollbackCount.Inc()
 
 	return nil
 }
@@ -411,9 +434,14 @@ func (s *Service) calculateDropout(ctx context.Context, timestamp time.Time, int
 		return err
 	}
 
-	m, err := s.createMetric(metric.Dropout, float64(count), "day", timestamp, nil)
+	m, err := s.createMetric("", metric.Dropout, float64(count), "day", timestamp, nil)
 
 	_, err = s.MetricRepository.Add(ctx, m)
+	if err != nil && !errors.Is(err, store.ErrorNotFound) {
+		return err
+	}
+	s.PrometheusMetrics.Dropout.Set(float64(count))
+
 	return err
 }
 
@@ -483,7 +511,7 @@ func (s *Service) calculateConversion(ctx context.Context, timestamp time.Time, 
 		zap.Int64("total_count", totalClientsCount),
 		zap.Float64("conversion_rate", conversionRate))
 
-	m, err := s.createMetric(
+	m, err := s.createMetric("",
 		metric.Conversion,
 		conversionRate,
 		interval,
@@ -497,6 +525,8 @@ func (s *Service) calculateConversion(ctx context.Context, timestamp time.Time, 
 	if _, err = s.MetricRepository.Add(ctx, m); err != nil {
 		return fmt.Errorf("failed to store conversion metric: %w", err)
 	}
+
+	s.PrometheusMetrics.Conversion.Set(conversionRate)
 
 	return nil
 }
@@ -536,10 +566,16 @@ func (s *Service) calculateTotalDuration(ctx context.Context, timestamp time.Tim
 		avgDurationDays = totalDuration.Hours() / 24 / float64(count)
 	}
 
-	m, err := s.createMetric(metric.TotalDuration, avgDurationDays, "", timestamp, nil)
+	m, err := s.createMetric("", metric.TotalDuration, avgDurationDays, "", timestamp, nil)
 
 	_, err = s.MetricRepository.Add(ctx, m)
-	return err
+	if err != nil && !errors.Is(err, store.ErrorNotFound) {
+		return err
+	}
+
+	s.PrometheusMetrics.TotalDuration.Set(avgDurationDays)
+
+	return nil
 }
 
 func (s *Service) calculateStatusUpdates(ctx context.Context, timestamp time.Time, interval string) error {
@@ -580,7 +616,7 @@ func (s *Service) calculateStatusUpdates(ctx context.Context, timestamp time.Tim
 		zap.String("interval", interval))
 
 	// Create and store the metric
-	m, err := s.createMetric(metric.StatusUpdates, float64(count), interval, timestamp, nil)
+	m, err := s.createMetric("", metric.StatusUpdates, float64(count), interval, timestamp, nil)
 	if err != nil {
 		return fmt.Errorf("failed to create status updates metric: %w", err)
 	}
@@ -588,6 +624,8 @@ func (s *Service) calculateStatusUpdates(ctx context.Context, timestamp time.Tim
 	if _, err = s.MetricRepository.Add(ctx, m); err != nil {
 		return fmt.Errorf("failed to store status updates metric: %w", err)
 	}
+
+	s.PrometheusMetrics.StatusUpdates.Set(float64(count))
 
 	return nil
 }
@@ -683,7 +721,7 @@ func (s *Service) calculateSourceConversion(ctx context.Context, timestamp time.
 			zap.Int64("completed", completed),
 			zap.Float64("conversion_rate", conversionRate))
 
-		m, err := s.createMetric(
+		m, err := s.createMetric("",
 			metric.SourceConversion,
 			conversionRate,
 			interval,
@@ -697,11 +735,15 @@ func (s *Service) calculateSourceConversion(ctx context.Context, timestamp time.
 		if _, err := s.MetricRepository.Add(ctx, m); err != nil {
 			return fmt.Errorf("failed to store source conversion metric: %w", err)
 		}
+
+		s.PrometheusMetrics.SourceConversion.WithLabelValues(source).Set(conversionRate)
+
 	}
 
 	return nil
 }
 
+// calculateSourceConversion calculates the conversion rate for each source
 func (s *Service) calculateChannelConversion(ctx context.Context, timestamp time.Time, interval string) error {
 	logger := zap.L().Named("service.track.metric.channel_conversion")
 
@@ -793,7 +835,7 @@ func (s *Service) calculateChannelConversion(ctx context.Context, timestamp time
 			zap.Int64("completed", completed),
 			zap.Float64("conversion_rate", conversionRate))
 
-		m, err := s.createMetric(
+		m, err := s.createMetric("",
 			metric.ChannelConversion,
 			conversionRate,
 			interval,
@@ -830,13 +872,18 @@ func (s *Service) calculateAppInstallRate(ctx context.Context, timestamp time.Ti
 		installRate = float64(installed) / float64(total)
 	}
 
-	m, err := s.createMetric(metric.AppInstallRate, installRate, "day", timestamp, nil)
+	m, err := s.createMetric("", metric.AppInstallRate, installRate, "day", timestamp, nil)
 	if err != nil {
 		return err
 	}
 
 	_, err = s.MetricRepository.Add(ctx, m)
-	return err
+	if err != nil && !errors.Is(err, store.ErrorNotFound) {
+		return err
+	}
+	s.PrometheusMetrics.AppInstallRate.Set(installRate)
+
+	return nil
 }
 
 func (s *Service) calculateAutoPaymentRate(ctx context.Context, timestamp time.Time) error {
@@ -863,12 +910,18 @@ func (s *Service) calculateAutoPaymentRate(ctx context.Context, timestamp time.T
 		autopaymentRate = float64(enabledContracts) / float64(totalContracts)
 	}
 
-	m, err := s.createMetric(metric.AutoPaymentRate, autopaymentRate, "day", timestamp, nil)
+	m, err := s.createMetric("", metric.AutoPaymentRate, autopaymentRate, "day", timestamp, nil)
 	if err != nil {
 		return err
 	}
 
 	_, err = s.MetricRepository.Add(ctx, m)
+	if err != nil && !errors.Is(err, store.ErrorNotFound) {
+		return err
+	}
+
+	s.PrometheusMetrics.AutoPaymentRate.Set(autopaymentRate)
+
 	return err
 }
 
@@ -876,14 +929,14 @@ func ptr(b bool) *bool {
 	return &b
 }
 
-func (s *Service) createMetric(metricType metric.Type, value float64, interval string, timestamp time.Time, metaData map[string]string) (metric.Entity, error) {
-	id, err := uuid.NewV4()
-	if err != nil {
-		return metric.Entity{}, err
+func (s *Service) createMetric(id string, metricType metric.Type, value float64, interval string, timestamp time.Time, metaData map[string]string) (metric.Entity, error) {
+
+	if id == "" {
+		id = primitive.NewObjectID().Hex()
 	}
 
 	return metric.Entity{
-		ID:        id.String(),
+		ID:        id,
 		Type:      &metricType,
 		Value:     &value,
 		Interval:  &interval,

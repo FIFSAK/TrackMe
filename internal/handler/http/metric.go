@@ -20,8 +20,6 @@ func (h *MetricHandler) Routes() chi.Router {
 	r := chi.NewRouter()
 
 	r.Get("/", h.list)
-	//r.Get("/prometheus", h.prometheus)
-
 	return r
 }
 

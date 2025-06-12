@@ -3,6 +3,7 @@ package handler
 import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	httpSwagger "github.com/swaggo/http-swagger/v2"
 
 	"TrackMe/docs"
@@ -69,7 +70,7 @@ func WithHTTPHandler() Configuration {
 			r.Mount("/clients", clientHandler.Routes())
 			r.Mount("/metrics", metricHandler.Routes())
 		})
-
+		h.HTTP.Handle("/metrics", promhttp.Handler())
 		return
 	}
 }
