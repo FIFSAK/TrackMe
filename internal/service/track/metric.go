@@ -22,10 +22,37 @@ func (s *Service) ListMetrics(ctx context.Context, filters metric.Filters) ([]me
 		logger.Error("metric repository is not initialized")
 		return nil, store.ErrorNotFound
 	}
-	entities, err := s.MetricRepository.List(ctx, filters)
+
+	var entities []metric.Entity
+	var err error
+
+	// Try to get metrics from cache if available
+	if s.MetricCache != nil {
+		entities, err = s.MetricCache.List(ctx, filters)
+		if err == nil {
+			logger.Debug("metrics retrieved from cache")
+			responses := metric.ParseFromEntities(entities)
+			return responses, nil
+		}
+		// Log cache miss but continue with repository
+		logger.Debug("cache miss, fetching from repository", zap.Error(err))
+	}
+
+	entities, err = s.MetricRepository.List(ctx, filters)
 	if err != nil {
 		logger.Error("failed to list clients", zap.Error(err))
 		return nil, err
+	}
+
+	if s.MetricCache != nil && len(entities) > 0 {
+		go func(ctx context.Context, filters metric.Filters, entitiesToCache []metric.Entity) {
+			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+			defer cancel()
+
+			if err := s.MetricCache.StoreList(ctx, filters, entitiesToCache); err != nil {
+				logger.Warn("failed to update metrics list cache", zap.Error(err))
+			}
+		}(context.Background(), filters, entities)
 	}
 
 	responses := metric.ParseFromEntities(entities)
@@ -46,9 +73,11 @@ func (s *Service) CalculateAllMetrics(ctx context.Context, interval string) erro
 		return err
 	}
 
-	if err := s.aggregateRollBackCount(ctx, now, interval); err != nil {
-		logger.Error("failed to aggregate rollback count", zap.Error(err))
-		return err
+	if interval != "day" {
+		if err := s.aggregateRollBackCount(ctx, now, interval); err != nil {
+			logger.Error("failed to aggregate rollback count", zap.Error(err))
+			return err
+		}
 	}
 
 	if err := s.calculateDropout(ctx, now, interval); err != nil {
@@ -102,6 +131,53 @@ func (s *Service) CalculateAllMetrics(ctx context.Context, interval string) erro
 	if err := s.calculateAutoPaymentRate(ctx, now); err != nil {
 		logger.Error("failed to calculate autopayment rate", zap.Error(err))
 		return err
+	}
+
+	// At the end of CalculateAllMetrics function
+	if s.MetricCache != nil {
+		// Define metric types and intervals that need invalidation
+		metricsToInvalidate := []struct {
+			Type     string
+			Interval string
+		}{
+			{string(metric.RollbackCount), interval},
+			{string(metric.ClientsPerStage), ""},
+			{string(metric.StageDuration), ""},
+			{string(metric.Dropout), interval},
+			{string(metric.Conversion), interval},
+			{string(metric.TotalDuration), ""},
+			{string(metric.StatusUpdates), interval},
+			{string(metric.SourceConversion), interval},
+			{string(metric.ChannelConversion), interval},
+			{string(metric.AppInstallRate), ""},
+			{string(metric.AutoPaymentRate), ""},
+		}
+
+		// Add DAU/MAU based on interval
+		if interval == "day" {
+			metricsToInvalidate = append(metricsToInvalidate, struct {
+				Type     string
+				Interval string
+			}{string(metric.DAU), "day"})
+		} else if interval == "month" {
+			metricsToInvalidate = append(metricsToInvalidate, struct {
+				Type     string
+				Interval string
+			}{string(metric.MAU), "month"})
+		}
+
+		// Invalidate all affected caches
+		for _, m := range metricsToInvalidate {
+			if err := s.MetricCache.InvalidateListCache(ctx, metric.Filters{
+				Type:     m.Type,
+				Interval: m.Interval,
+			}); err != nil {
+				zap.L().Warn("failed to invalidate metrics cache",
+					zap.String("type", m.Type),
+					zap.String("interval", m.Interval),
+					zap.Error(err))
+			}
+		}
 	}
 
 	return nil
@@ -172,7 +248,7 @@ func (s *Service) calculateClientsPerStage(ctx context.Context, timestamp time.T
 		if err != nil {
 			return err
 		}
-		metric, err := s.createMetric("", metric.ClientsPerStage, float64(count), "day", timestamp, map[string]string{"stage": stage.ID})
+		metric, err := s.createMetric("", metric.ClientsPerStage, float64(count), "", timestamp, map[string]string{"stage": stage.ID})
 		if err != nil {
 			return err
 		}
@@ -210,7 +286,7 @@ func (s *Service) calculateStageDuration(ctx context.Context, timestamp time.Tim
 		}
 		avgDuration := total / time.Duration(len(durations))
 
-		metric, err := s.createMetric("", metric.StageDuration, avgDuration.Hours(), "day", timestamp, map[string]string{"stage": stageID})
+		metric, err := s.createMetric("", metric.StageDuration, avgDuration.Hours(), "", timestamp, map[string]string{"stage": stageID})
 		if err != nil {
 			return err
 		}
@@ -393,6 +469,18 @@ func (s *Service) calculateRollbackCount(ctx context.Context, timestamp time.Tim
 			if _, err = s.MetricRepository.Update(ctx, updated.ID, updated); err != nil {
 				return fmt.Errorf("failed to update rollback count: %w", err)
 			}
+
+			// Invalidate the cached list so future queries get fresh data
+			if s.MetricCache != nil {
+				if err = s.MetricCache.InvalidateListCache(ctx, metric.Filters{
+					Type:     string(metric.RollbackCount),
+					Interval: "day",
+				}); err != nil {
+					// Log error but don't fail the operation
+					zap.L().Warn("failed to invalidate metrics cache", zap.Error(err))
+				}
+			}
+
 			s.PrometheusMetrics.RollbackCount.Inc()
 
 			return nil
@@ -405,8 +493,18 @@ func (s *Service) calculateRollbackCount(ctx context.Context, timestamp time.Tim
 			return fmt.Errorf("failed to create rollback metric: %w", err)
 		}
 
-		if _, err := s.MetricRepository.Add(ctx, newMetric); err != nil {
+		if _, err = s.MetricRepository.Add(ctx, newMetric); err != nil {
 			return fmt.Errorf("failed to store rollback metric: %w", err)
+		}
+
+		// Invalidate the cached list after adding a new metric
+		if s.MetricCache != nil {
+			if err = s.MetricCache.InvalidateListCache(ctx, metric.Filters{
+				Type:     string(metric.RollbackCount),
+				Interval: "day",
+			}); err != nil {
+				zap.L().Warn("failed to invalidate metrics cache", zap.Error(err))
+			}
 		}
 
 	}
@@ -434,7 +532,7 @@ func (s *Service) calculateDropout(ctx context.Context, timestamp time.Time, int
 		return err
 	}
 
-	m, err := s.createMetric("", metric.Dropout, float64(count), "day", timestamp, nil)
+	m, err := s.createMetric("", metric.Dropout, float64(count), interval, timestamp, nil)
 
 	_, err = s.MetricRepository.Add(ctx, m)
 	if err != nil && !errors.Is(err, store.ErrorNotFound) {
@@ -872,7 +970,7 @@ func (s *Service) calculateAppInstallRate(ctx context.Context, timestamp time.Ti
 		installRate = float64(installed) / float64(total)
 	}
 
-	m, err := s.createMetric("", metric.AppInstallRate, installRate, "day", timestamp, nil)
+	m, err := s.createMetric("", metric.AppInstallRate, installRate, "", timestamp, nil)
 	if err != nil {
 		return err
 	}
@@ -910,7 +1008,7 @@ func (s *Service) calculateAutoPaymentRate(ctx context.Context, timestamp time.T
 		autopaymentRate = float64(enabledContracts) / float64(totalContracts)
 	}
 
-	m, err := s.createMetric("", metric.AutoPaymentRate, autopaymentRate, "day", timestamp, nil)
+	m, err := s.createMetric("", metric.AutoPaymentRate, autopaymentRate, "", timestamp, nil)
 	if err != nil {
 		return err
 	}

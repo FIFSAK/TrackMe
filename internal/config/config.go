@@ -15,6 +15,7 @@ type (
 		APP      AppConfig
 		CURRENCY ClientConfig
 		MONGO    StoreConfig
+		Redis    RedisConfig
 	}
 
 	AppConfig struct {
@@ -32,6 +33,10 @@ type (
 
 	StoreConfig struct {
 		DSN string
+	}
+
+	RedisConfig struct {
+		URL string
 	}
 )
 
@@ -53,6 +58,10 @@ func New() (cfg Configs, err error) {
 		Port:    os.Getenv("APP_PORT"),
 		Path:    os.Getenv("APP_PATH"),
 		Timeout: time.Duration(appTimeout),
+	}
+
+	cfg.Redis = RedisConfig{
+		URL: os.Getenv("REDIS_URL"),
 	}
 
 	if err = envconfig.Process("APP", &cfg.APP); err != nil {

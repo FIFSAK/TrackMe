@@ -60,10 +60,6 @@ func (s *Service) GetClient(ctx context.Context, id string) (client.Response, er
 		return client.Response{}, err
 	}
 
-	if cacheErr := s.clientCache.Set(ctx, id, repoClient); cacheErr != nil {
-		logger.Warn("failed to cache client", zap.Error(cacheErr))
-	}
-
 	return client.ParseFromEntity(repoClient), nil
 }
 
@@ -134,11 +130,6 @@ func (s *Service) DeleteClient(ctx context.Context, id string) error {
 		}
 		logger.Error("failed to delete client", zap.Error(err))
 		return err
-	}
-
-	// Remove the client from the cache
-	if err := s.clientCache.Set(ctx, id, client.Entity{}); err != nil {
-		logger.Warn("failed to remove client from cache", zap.Error(err))
 	}
 
 	return nil

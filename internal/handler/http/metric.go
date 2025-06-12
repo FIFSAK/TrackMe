@@ -4,6 +4,7 @@ import (
 	"TrackMe/internal/domain/metric"
 	"TrackMe/internal/service/track"
 	"TrackMe/pkg/server/response"
+	"errors"
 	"github.com/go-chi/chi/v5"
 	"net/http"
 )
@@ -20,6 +21,7 @@ func (h *MetricHandler) Routes() chi.Router {
 	r := chi.NewRouter()
 
 	r.Get("/", h.list)
+	r.Get("/calculate", h.triggerCalculateAllMetrics)
 	return r
 }
 
@@ -55,6 +57,20 @@ func (h *MetricHandler) list(w http.ResponseWriter, r *http.Request) {
 	}
 
 	response.OK(w, r, metrics, nil)
+}
+
+func (h *MetricHandler) triggerCalculateAllMetrics(w http.ResponseWriter, r *http.Request) {
+	interval := r.URL.Query().Get("interval")
+	if interval == "" {
+		response.BadRequest(w, r, errors.New("interval parameter is required"), interval)
+		return
+	}
+	if err := h.trackService.CalculateAllMetrics(r.Context(), interval); err != nil {
+		response.InternalServerError(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("Metric calculations triggered"))
 }
 
 //// @Summary Get metrics in Prometheus format

@@ -16,7 +16,7 @@ type Service struct {
 	clientRepository  client.Repository
 	StageRepository   stage.Repository
 	MetricRepository  metric.Repository
-	clientCache       client.Cache
+	MetricCache       metric.Cache
 }
 
 // New takes a variable amount of Configuration functions and returns a new Service
@@ -75,12 +75,12 @@ func WithPrometheusMetrics(prometheusMetrics prometheus.Entity) Configuration {
 	}
 }
 
-// WithClientCache applies a given client cache to the Service
-func WithClientCache(clientCache client.Cache) Configuration {
+// WithMetricCache applies a given client cache to the Service
+func WithMetricCache(metricCache metric.Cache) Configuration {
 	// return a function that matches the Configuration alias,
 	// You need to return this so that the parent function can take in all the needed parameters
 	return func(s *Service) error {
-		s.clientCache = clientCache
+		s.MetricCache = metricCache
 		return nil
 	}
 }

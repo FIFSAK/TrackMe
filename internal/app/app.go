@@ -1,6 +1,7 @@
 package app
 
 import (
+	"TrackMe/internal/cache"
 	"TrackMe/internal/config"
 	"TrackMe/internal/domain/prometheus"
 	"TrackMe/internal/handler"
@@ -46,8 +47,19 @@ func Run() {
 	}
 	defer repositories.Close()
 
+	caches, err := cache.New(
+		cache.Dependencies{
+			MetricRepository: repositories.Metric,
+		},
+		cache.WithRedisStore(configs.Redis.URL))
+	if err != nil {
+		logger.Error("ERR_INIT_CACHES", zap.Error(err))
+		return
+	}
+	defer caches.Close()
+
 	trackService, err := track.New(
-		track.WithClientRepository(repositories.Client), track.WithStageRepository(repositories.Stage), track.WithMetricRepository(repositories.Metric), track.WithPrometheusMetrics(promMetrics))
+		track.WithClientRepository(repositories.Client), track.WithStageRepository(repositories.Stage), track.WithMetricRepository(repositories.Metric), track.WithPrometheusMetrics(promMetrics), track.WithMetricCache(caches.Metric))
 	if err != nil {
 		logger.Error("ERR_INIT_LIBRARY_SERVICE", zap.Error(err))
 		return
