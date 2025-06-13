@@ -89,15 +89,6 @@ func (r *ClientRepository) List(ctx context.Context, filters client.Filters, lim
 	return clients, int(total), nil
 }
 
-// Add inserts a new client into the database.
-func (r *ClientRepository) Add(ctx context.Context, data client.Entity) (string, error) {
-	res, err := r.db.InsertOne(ctx, data)
-	if err != nil {
-		return "", err
-	}
-	return res.InsertedID.(primitive.ObjectID).Hex(), nil
-}
-
 // Get retrieves a client by ID from the database.
 func (r *ClientRepository) Get(ctx context.Context, id string) (client.Entity, error) {
 	objID, err := primitive.ObjectIDFromHex(id)
@@ -165,22 +156,6 @@ func prepareUpdateFields(data client.Entity) bson.M {
 	}
 
 	return fields
-}
-
-// Delete removes a client by ID from the database.
-func (r *ClientRepository) Delete(ctx context.Context, id string) error {
-	objID, err := primitive.ObjectIDFromHex(id)
-	if err != nil {
-		return err
-	}
-	res, err := r.db.DeleteOne(ctx, bson.M{"_id": objID})
-	if err != nil {
-		return err
-	}
-	if res.DeletedCount == 0 {
-		return store.ErrorNotFound
-	}
-	return nil
 }
 
 // prepareArgs prepares the update arguments for the MongoDB query.

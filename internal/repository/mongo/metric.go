@@ -2,9 +2,7 @@ package mongo
 
 import (
 	"TrackMe/internal/domain/metric"
-	"TrackMe/pkg/store"
 	"context"
-	"errors"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -63,20 +61,6 @@ func (r *MetricRepository) Add(ctx context.Context, data metric.Entity) (string,
 	return res.InsertedID.(primitive.ObjectID).Hex(), nil
 }
 
-// Get retrieves a metric by ID from the database.
-func (r *MetricRepository) Get(ctx context.Context, id string) (metric.Entity, error) {
-	objID, err := primitive.ObjectIDFromHex(id)
-	if err != nil {
-		return metric.Entity{}, err
-	}
-	var metric metric.Entity
-	err = r.db.FindOne(ctx, bson.M{"_id": objID}).Decode(&metric)
-	if err != nil && errors.Is(err, mongo.ErrNoDocuments) {
-		return metric, store.ErrorNotFound
-	}
-	return metric, err
-}
-
 // Update modifies an existing metric in the database.
 func (r *MetricRepository) Update(ctx context.Context, id string, data metric.Entity) (metric.Entity, error) {
 	objID, err := primitive.ObjectIDFromHex(id)
@@ -111,20 +95,4 @@ func (r *MetricRepository) Update(ctx context.Context, id string, data metric.En
 		return metric.Entity{}, err
 	}
 	return updated, nil
-}
-
-// Delete removes a metric by ID from the database.
-func (r *MetricRepository) Delete(ctx context.Context, id string) error {
-	objID, err := primitive.ObjectIDFromHex(id)
-	if err != nil {
-		return err
-	}
-	res, err := r.db.DeleteOne(ctx, bson.M{"_id": objID})
-	if err != nil {
-		return err
-	}
-	if res.DeletedCount == 0 {
-		return store.ErrorNotFound
-	}
-	return nil
 }

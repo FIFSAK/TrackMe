@@ -25,34 +25,6 @@ func NewMetricCache(c *redis.Client, r metric.Repository) *MetricCache {
 	}
 }
 
-// Get retrieves an author entity by its ID from the cache or repository.
-func (c *MetricCache) Get(ctx context.Context, id string) (metric.Entity, error) {
-	data, err := c.cache.Get(ctx, id).Result()
-	if err == nil {
-		var entity metric.Entity
-		if err = json.Unmarshal([]byte(data), &entity); err != nil {
-			return metric.Entity{}, err
-		}
-		return entity, nil
-	}
-
-	entity, err := c.repository.Get(ctx, id)
-	if err != nil {
-		return metric.Entity{}, err
-	}
-
-	payload, err := json.Marshal(entity)
-	if err != nil {
-		return metric.Entity{}, err
-	}
-
-	if err = c.cache.Set(ctx, id, payload, 5*time.Minute).Err(); err != nil {
-		return metric.Entity{}, err
-	}
-
-	return entity, nil
-}
-
 // Set stores an author entity in the cache.
 func (c *MetricCache) Set(ctx context.Context, id string, entity metric.Entity) error {
 	payload, err := json.Marshal(entity)

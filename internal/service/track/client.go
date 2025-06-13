@@ -30,44 +30,6 @@ func (s *Service) ListClients(ctx context.Context, filters client.Filters, limit
 	return responses, total, nil
 }
 
-// AddClient adds a new client to the repository.
-func (s *Service) AddClient(ctx context.Context, req client.Request) (client.Response, error) {
-	logger := log.LoggerFromContext(ctx).With().
-		Interface("client", req).
-		Str("component", "add_client").
-		Logger()
-	newClient := client.New(req)
-
-	id, err := s.clientRepository.Add(ctx, newClient)
-	if err != nil {
-		logger.Error().Err(err).Msg("failed to add client")
-		return client.Response{}, err
-	}
-	newClient.ID = id
-
-	return client.ParseFromEntity(newClient), nil
-}
-
-// GetClient retrieves a client by ID from the cache or repository.
-func (s *Service) GetClient(ctx context.Context, id string) (client.Response, error) {
-	logger := log.LoggerFromContext(ctx).With().
-		Str("id", id).
-		Str("component", "get_client").
-		Logger()
-
-	repoClient, err := s.clientRepository.Get(ctx, id)
-	if err != nil {
-		if errors.Is(err, store.ErrorNotFound) {
-			logger.Warn().Err(err).Msg("client not found")
-			return client.Response{}, err
-		}
-		logger.Error().Err(err).Msg("failed to get client")
-		return client.Response{}, err
-	}
-
-	return client.ParseFromEntity(repoClient), nil
-}
-
 // UpdateClient updates an existing client in the repository.
 func (s *Service) UpdateClient(ctx context.Context, id string, req client.Request) (client.Response, error) {
 	logger := log.LoggerFromContext(ctx).With().
@@ -125,25 +87,4 @@ func (s *Service) UpdateClient(ctx context.Context, id string, req client.Reques
 	}
 
 	return client.ParseFromEntity(result), nil
-}
-
-// DeleteClient deletes a client by ID from the repository.
-func (s *Service) DeleteClient(ctx context.Context, id string) error {
-	logger := log.LoggerFromContext(ctx).With().
-		Str("id", id).
-		Str("component", "delete_client").
-		Logger()
-
-	// Delete the client from the repository
-	err := s.clientRepository.Delete(ctx, id)
-	if err != nil {
-		if errors.Is(err, store.ErrorNotFound) {
-			logger.Warn().Err(err).Msg("client not found")
-			return err
-		}
-		logger.Error().Err(err).Msg("failed to delete client")
-		return err
-	}
-
-	return nil
 }

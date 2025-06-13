@@ -10,7 +10,6 @@ import (
 	"sync"
 
 	"TrackMe/internal/domain/stage"
-	"github.com/google/uuid"
 )
 
 // StageRepository handles CRUD operations for stages in an in-memory database using sync.Map
@@ -76,13 +75,6 @@ func (r *StageRepository) List(ctx context.Context) ([]stage.Entity, error) {
 	return stages, nil
 }
 
-// Add inserts a new stage into the in-memory database
-func (r *StageRepository) Add(ctx context.Context, data stage.Entity) (string, error) {
-	id := uuid.New().String()
-	r.db.Store(id, data)
-	return id, nil
-}
-
 // Get retrieves a stage by ID from the in-memory database
 func (r *StageRepository) Get(ctx context.Context, id string) (stage.Entity, error) {
 	value, ok := r.db.Load(id)
@@ -96,26 +88,6 @@ func (r *StageRepository) Get(ctx context.Context, id string) (stage.Entity, err
 	}
 
 	return stageEntity, nil
-}
-
-// Update modifies an existing stage in the in-memory database
-func (r *StageRepository) Update(ctx context.Context, id string, data stage.Entity) error {
-	if _, ok := r.db.Load(id); !ok {
-		return sql.ErrNoRows
-	}
-
-	r.db.Store(id, data)
-	return nil
-}
-
-// Delete removes a stage by ID from the in-memory database
-func (r *StageRepository) Delete(ctx context.Context, id string) error {
-	if _, ok := r.db.Load(id); !ok {
-		return sql.ErrNoRows
-	}
-
-	r.db.Delete(id)
-	return nil
 }
 
 // UpdateStage returns the next or previous stage ID based on the given option
