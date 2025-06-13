@@ -22,5 +22,6 @@ type Repository interface {
 	// Delete removes a client entity by its ID.
 	Delete(ctx context.Context, id string) error
 
+	// Count returns the total number of client entities matching the filter.
 	Count(ctx context.Context, filter bson.M) (int64, error)
 }

@@ -2,59 +2,69 @@ package log
 
 import (
 	"context"
+	"fmt"
+	"io"
 	"os"
+	"time"
 
-	"go.elastic.co/apm/module/apmzap"
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/diode"
 )
 
 var (
-	defaultLogger *zap.Logger
+	defaultLogger zerolog.Logger
 )
 
 func init() {
 	defaultLogger = New()
 }
 
-type logger struct{}
+type loggerKey struct{}
 
 // ContextWithLogger adds logger to context
-func ContextWithLogger(ctx context.Context, l *zap.Logger) context.Context {
-	return context.WithValue(ctx, logger{}, l)
+func ContextWithLogger(ctx context.Context, l zerolog.Logger) context.Context {
+	return context.WithValue(ctx, loggerKey{}, l)
 }
 
 // LoggerFromContext returns logger from context
-func LoggerFromContext(ctx context.Context) *zap.Logger {
-	if l, ok := ctx.Value(logger{}).(*zap.Logger); ok {
+func LoggerFromContext(ctx context.Context) zerolog.Logger {
+	if l, ok := ctx.Value(loggerKey{}).(zerolog.Logger); ok {
 		return l
 	}
-	lg := defaultLogger
-
-	return lg
+	return defaultLogger
 }
 
-func New() *zap.Logger {
-	cfg := zap.NewProductionConfig()
+func New() zerolog.Logger {
+	// Configure zerolog
+	zerolog.TimeFieldFormat = time.RFC3339
 
-	if os.Getenv("DEBUG") != "" {
-		cfg = zap.NewDevelopmentConfig()
+	// Enable asynchronous logging
+	fileWriter, err := os.OpenFile("service.log", os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0666)
 
-		if os.Getenv("DEBUG") == "true" {
-			cfg.Level = zap.NewAtomicLevelAt(zap.DebugLevel)
-		}
+	// Create an asynchronous writer with a buffer
+	asyncWriter := diode.NewWriter(fileWriter, 1000, 10*time.Millisecond, func(missed int) {
+		fmt.Printf("Logger dropped %d messages", missed)
+	})
+
+	// Use multi-writer for console and async file output
+	multi := io.MultiWriter(os.Stdout, asyncWriter)
+
+	// Set log level based on DEBUG environment variable
+	level := zerolog.InfoLevel
+	if os.Getenv("DEBUG") == "true" {
+		level = zerolog.DebugLevel
 	}
 
-	cfg.EncoderConfig.TimeKey = "timestamp"
-	cfg.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
-	cfg.OutputPaths = []string{"stdout", "service.log"}
+	zerolog.SetGlobalLevel(level)
 
-	log, err := cfg.Build(zap.WrapCore((&apmzap.Core{FatalFlushTimeout: 10000}).WrapCore))
+	// Create logger with timestamp
+	logger := zerolog.New(multi).With().Timestamp().Logger()
+
+	// Handle file writer error
 	if err != nil {
-		log = zap.NewExample()
-		log.Warn("Unable to set up the logger. Replaced with example one which shouldn't fail", zap.Error(err))
+		logger = zerolog.New(os.Stdout).With().Timestamp().Logger()
+		logger.Warn().Err(err).Msg("Unable to set up file logging. Using stdout only.")
 	}
-	defer log.Sync()
 
-	return log
+	return logger
 }

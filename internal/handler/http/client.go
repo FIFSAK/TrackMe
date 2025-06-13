@@ -160,6 +160,10 @@ func (h *ClientHandler) update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if clientResp.RegistrationDate == time.Now().String() {
+		response.Created(w, r, clientResp)
+	}
+
 	response.OK(w, r, clientResp, nil)
 }
 

@@ -4,6 +4,7 @@ import (
 	"TrackMe/internal/domain/metric"
 	"TrackMe/internal/service/track"
 	"TrackMe/pkg/server/response"
+	"TrackMe/pkg/store"
 	"errors"
 	"github.com/go-chi/chi/v5"
 	"net/http"
@@ -52,7 +53,12 @@ func (h *MetricHandler) list(w http.ResponseWriter, r *http.Request) {
 
 	metrics, err := h.trackService.ListMetrics(r.Context(), filters)
 	if err != nil {
-		response.InternalServerError(w, r, err)
+		switch {
+		case errors.Is(err, store.ErrorNotFound):
+			response.NotFound(w, r, err)
+		default:
+			response.InternalServerError(w, r, err)
+		}
 		return
 	}
 
@@ -69,8 +75,7 @@ func (h *MetricHandler) triggerCalculateAllMetrics(w http.ResponseWriter, r *htt
 		response.InternalServerError(w, r, err)
 		return
 	}
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("Metric calculations triggered"))
+	response.OK(w, r, map[string]string{"message":"triggerred success"}, nil)
 }
 
 //// @Summary Get metrics in Prometheus format

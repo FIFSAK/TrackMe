@@ -18,7 +18,7 @@ type Mongo struct {
 }
 
 func NewMongo(uri string) (store Mongo, err error) {
-	store.Client, err = mongo.NewClient(options.Client().ApplyURI("mongodb://localhost:27017"))
+	store.Client, err = mongo.NewClient(options.Client().ApplyURI(uri))
 	if err != nil {
 		return
 	}

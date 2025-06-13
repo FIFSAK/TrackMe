@@ -4,9 +4,6 @@ github.com/KyleBanks/depth
 # github.com/ajg/form v1.5.1
 ## explicit
 github.com/ajg/form
-# github.com/armon/go-radix v1.0.0
-## explicit
-github.com/armon/go-radix
 # github.com/beorn7/perks v1.0.1
 ## explicit; go 1.11
 github.com/beorn7/perks/quantile
@@ -19,22 +16,6 @@ github.com/cespare/xxhash/v2
 # github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f
 ## explicit
 github.com/dgryski/go-rendezvous
-# github.com/elastic/go-licenser v0.3.1
-## explicit
-github.com/elastic/go-licenser
-github.com/elastic/go-licenser/licensing
-# github.com/elastic/go-sysinfo v1.1.1
-## explicit; go 1.13
-github.com/elastic/go-sysinfo
-github.com/elastic/go-sysinfo/internal/registry
-github.com/elastic/go-sysinfo/providers/darwin
-github.com/elastic/go-sysinfo/providers/linux
-github.com/elastic/go-sysinfo/providers/shared
-github.com/elastic/go-sysinfo/providers/windows
-github.com/elastic/go-sysinfo/types
-# github.com/elastic/go-windows v1.0.0
-## explicit
-github.com/elastic/go-windows
 # github.com/go-chi/chi/v5 v5.2.1
 ## explicit; go 1.20
 github.com/go-chi/chi/v5
@@ -58,9 +39,6 @@ github.com/go-openapi/spec
 # github.com/go-openapi/swag v0.19.15
 ## explicit; go 1.11
 github.com/go-openapi/swag
-# github.com/gofrs/uuid v4.0.0+incompatible
-## explicit
-github.com/gofrs/uuid
 # github.com/golang-migrate/migrate/v4 v4.18.3
 ## explicit; go 1.23.0
 github.com/golang-migrate/migrate/v4
@@ -84,16 +62,10 @@ github.com/hashicorp/errwrap
 # github.com/hashicorp/go-multierror v1.1.1
 ## explicit; go 1.13
 github.com/hashicorp/go-multierror
-# github.com/jcchavezs/porto v0.1.0
-## explicit; go 1.15
-github.com/jcchavezs/porto
 # github.com/jmoiron/sqlx v1.4.0
 ## explicit; go 1.10
 github.com/jmoiron/sqlx
 github.com/jmoiron/sqlx/reflectx
-# github.com/joeshaw/multierror v0.0.0-20140124173710-69b34d4ec901
-## explicit
-github.com/joeshaw/multierror
 # github.com/joho/godotenv v1.5.1
 ## explicit; go 1.12
 github.com/joho/godotenv
@@ -123,15 +95,18 @@ github.com/lib/pq/scram
 github.com/mailru/easyjson/buffer
 github.com/mailru/easyjson/jlexer
 github.com/mailru/easyjson/jwriter
+# github.com/mattn/go-colorable v0.1.13
+## explicit; go 1.15
+github.com/mattn/go-colorable
+# github.com/mattn/go-isatty v0.0.19
+## explicit; go 1.15
+github.com/mattn/go-isatty
 # github.com/montanaflynn/stats v0.7.1
 ## explicit; go 1.13
 github.com/montanaflynn/stats
 # github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822
 ## explicit
 github.com/munnerz/goautoneg
-# github.com/pkg/errors v0.9.1
-## explicit
-github.com/pkg/errors
 # github.com/prometheus/client_golang v1.22.0
 ## explicit; go 1.22
 github.com/prometheus/client_golang/internal/github.com/golang/gddo/httputil
@@ -166,13 +141,13 @@ github.com/redis/go-redis/v9/internal/util
 # github.com/robfig/cron/v3 v3.0.1
 ## explicit; go 1.12
 github.com/robfig/cron/v3
-# github.com/santhosh-tekuri/jsonschema v1.2.4
-## explicit
-github.com/santhosh-tekuri/jsonschema
-github.com/santhosh-tekuri/jsonschema/decoders
-github.com/santhosh-tekuri/jsonschema/formats
-github.com/santhosh-tekuri/jsonschema/loader
-github.com/santhosh-tekuri/jsonschema/mediatypes
+# github.com/rs/zerolog v1.34.0
+## explicit; go 1.15
+github.com/rs/zerolog
+github.com/rs/zerolog/diode
+github.com/rs/zerolog/diode/internal/diodes
+github.com/rs/zerolog/internal/cbor
+github.com/rs/zerolog/internal/json
 # github.com/swaggo/files/v2 v2.0.0
 ## explicit; go 1.16
 github.com/swaggo/files/v2
@@ -194,33 +169,6 @@ github.com/xdg-go/stringprep
 # github.com/youmark/pkcs8 v0.0.0-20240726163527-a2c0da244d78
 ## explicit; go 1.17
 github.com/youmark/pkcs8
-# go.elastic.co/apm v1.15.0
-## explicit; go 1.13
-go.elastic.co/apm
-go.elastic.co/apm/apmconfig
-go.elastic.co/apm/internal/apmcloudutil
-go.elastic.co/apm/internal/apmcontext
-go.elastic.co/apm/internal/apmhostutil
-go.elastic.co/apm/internal/apmhttputil
-go.elastic.co/apm/internal/apmlog
-go.elastic.co/apm/internal/apmmath
-go.elastic.co/apm/internal/apmschema
-go.elastic.co/apm/internal/apmstrings
-go.elastic.co/apm/internal/apmversion
-go.elastic.co/apm/internal/configutil
-go.elastic.co/apm/internal/iochan
-go.elastic.co/apm/internal/pkgerrorsutil
-go.elastic.co/apm/internal/ringbuffer
-go.elastic.co/apm/internal/wildcard
-go.elastic.co/apm/model
-go.elastic.co/apm/stacktrace
-go.elastic.co/apm/transport
-# go.elastic.co/apm/module/apmzap v1.15.0
-## explicit; go 1.13
-go.elastic.co/apm/module/apmzap
-# go.elastic.co/fastjson v1.1.0
-## explicit; go 1.14
-go.elastic.co/fastjson
 # go.mongodb.org/mongo-driver v1.17.3
 ## explicit; go 1.18
 go.mongodb.org/mongo-driver/bson
@@ -292,16 +240,6 @@ go.uber.org/zap/zapcore
 golang.org/x/crypto/ocsp
 golang.org/x/crypto/pbkdf2
 golang.org/x/crypto/scrypt
-# golang.org/x/lint v0.0.0-20201208152925-83fdc39ff7b5
-## explicit; go 1.11
-golang.org/x/lint
-golang.org/x/lint/golint
-# golang.org/x/mod v0.21.0
-## explicit; go 1.22.0
-golang.org/x/mod/internal/lazyregexp
-golang.org/x/mod/modfile
-golang.org/x/mod/module
-golang.org/x/mod/semver
 # golang.org/x/net v0.38.0
 ## explicit; go 1.23.0
 golang.org/x/net/http/httpguts
@@ -319,7 +257,6 @@ golang.org/x/sync/singleflight
 ## explicit; go 1.23.0
 golang.org/x/sys/unix
 golang.org/x/sys/windows
-golang.org/x/sys/windows/registry
 # golang.org/x/text v0.25.0
 ## explicit; go 1.23.0
 golang.org/x/text/secure/bidirule
@@ -328,26 +265,10 @@ golang.org/x/text/unicode/bidi
 golang.org/x/text/unicode/norm
 # golang.org/x/tools v0.24.0
 ## explicit; go 1.19
-golang.org/x/tools/cmd/goimports
 golang.org/x/tools/go/ast/astutil
 golang.org/x/tools/go/buildutil
-golang.org/x/tools/go/gcexportdata
 golang.org/x/tools/go/internal/cgo
 golang.org/x/tools/go/loader
-golang.org/x/tools/go/types/objectpath
-golang.org/x/tools/internal/aliases
-golang.org/x/tools/internal/event
-golang.org/x/tools/internal/event/core
-golang.org/x/tools/internal/event/keys
-golang.org/x/tools/internal/event/label
-golang.org/x/tools/internal/gcimporter
-golang.org/x/tools/internal/gocommand
-golang.org/x/tools/internal/gopathwalk
-golang.org/x/tools/internal/imports
-golang.org/x/tools/internal/pkgbits
-golang.org/x/tools/internal/stdlib
-golang.org/x/tools/internal/tokeninternal
-golang.org/x/tools/internal/typesinternal
 golang.org/x/tools/internal/versions
 # google.golang.org/genproto/googleapis/rpc v0.0.0-20241202173237-19429a94021a
 ## explicit; go 1.21
@@ -450,6 +371,3 @@ google.golang.org/protobuf/types/known/timestamppb
 # gopkg.in/yaml.v2 v2.4.0
 ## explicit; go 1.15
 gopkg.in/yaml.v2
-# howett.net/plist v0.0.0-20181124034731-591f970eefbb
-## explicit
-howett.net/plist

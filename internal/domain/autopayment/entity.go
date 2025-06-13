@@ -1,6 +1,6 @@
 package autopayment
 
-// Entity represents a auto payment in the system.
+// Entity represents an auto payment in the system.
 type Entity struct {
 	Status string `db:"status" bson:"status"`
 }

@@ -3,25 +3,22 @@ package track
 import (
 	"TrackMe/internal/domain/client"
 	"TrackMe/internal/domain/metric"
+	"TrackMe/pkg/log"
 	"TrackMe/pkg/store"
 	"context"
 	"errors"
 	"fmt"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.uber.org/zap"
 	"time"
 )
 
 // ListMetrics retrieves all metric from the repository.
 func (s *Service) ListMetrics(ctx context.Context, filters metric.Filters) ([]metric.Response, error) {
-	logger := zap.L().Named("service.client").With(
-		zap.Any("filters", filters),
-	)
-	if s.MetricRepository == nil {
-		logger.Error("metric repository is not initialized")
-		return nil, store.ErrorNotFound
-	}
+	logger := log.LoggerFromContext(ctx).With().
+		Interface("filters", filters).
+		Str("component", "service.client").
+		Logger()
 
 	var entities []metric.Entity
 	var err error
@@ -30,17 +27,17 @@ func (s *Service) ListMetrics(ctx context.Context, filters metric.Filters) ([]me
 	if s.MetricCache != nil {
 		entities, err = s.MetricCache.List(ctx, filters)
 		if err == nil {
-			logger.Debug("metrics retrieved from cache")
+			logger.Debug().Msg("metrics retrieved from cache")
 			responses := metric.ParseFromEntities(entities)
 			return responses, nil
 		}
 		// Log cache miss but continue with repository
-		logger.Debug("cache miss, fetching from repository", zap.Error(err))
+		logger.Debug().Err(err).Msg("cache miss, fetching from repository")
 	}
 
 	entities, err = s.MetricRepository.List(ctx, filters)
 	if err != nil {
-		logger.Error("failed to list clients", zap.Error(err))
+		logger.Error().Err(err).Msg("failed to list clients")
 		return nil, err
 	}
 
@@ -50,7 +47,7 @@ func (s *Service) ListMetrics(ctx context.Context, filters metric.Filters) ([]me
 			defer cancel()
 
 			if err := s.MetricCache.StoreList(ctx, filters, entitiesToCache); err != nil {
-				logger.Warn("failed to update metrics list cache", zap.Error(err))
+				logger.Warn().Err(err).Msg("failed to update metrics list cache")
 			}
 		}(context.Background(), filters, entities)
 	}
@@ -60,76 +57,76 @@ func (s *Service) ListMetrics(ctx context.Context, filters metric.Filters) ([]me
 }
 
 func (s *Service) CalculateAllMetrics(ctx context.Context, interval string) error {
-	logger := zap.L().Named("service.track.metric")
+	logger := log.LoggerFromContext(ctx).With().Str("component", "service.track.metric").Logger()
 	now := time.Now()
 
 	if err := s.calculateClientsPerStage(ctx, now); err != nil {
-		logger.Error("failed to calculate clients per stage", zap.Error(err))
+		logger.Error().Err(err).Msg("failed to calculate clients per stage")
 		return err
 	}
 
 	if err := s.calculateStageDuration(ctx, now); err != nil {
-		logger.Error("failed to calculate stage duration", zap.Error(err))
+		logger.Error().Err(err).Msg("failed to calculate stage duration")
 		return err
 	}
 
 	if interval != "day" {
 		if err := s.aggregateRollBackCount(ctx, now, interval); err != nil {
-			logger.Error("failed to aggregate rollback count", zap.Error(err))
+			logger.Error().Err(err).Msg("failed to aggregate rollback count")
 			return err
 		}
 	}
 
 	if err := s.calculateDropout(ctx, now, interval); err != nil {
-		logger.Error("failed to calculate dropout", zap.Error(err))
+		logger.Error().Err(err).Msg("failed to calculate dropout")
 		return err
 	}
 
 	if err := s.calculateConversion(ctx, now, interval); err != nil {
-		logger.Error("failed to calculate conversion", zap.Error(err))
+		logger.Error().Err(err).Msg("failed to calculate conversion")
 		return err
 	}
 
 	if err := s.calculateTotalDuration(ctx, now); err != nil {
-		logger.Error("failed to calculate total duration", zap.Error(err))
+		logger.Error().Err(err).Msg("failed to calculate total duration")
 		return err
 	}
 
 	if err := s.calculateStatusUpdates(ctx, now, interval); err != nil {
-		logger.Error("failed to calculate status updates", zap.Error(err))
+		logger.Error().Err(err).Msg("failed to calculate status updates")
 		return err
 	}
 
 	if interval == "day" {
 		if err := s.calculateDAU(ctx, now); err != nil {
-			logger.Error("failed to calculate DAU", zap.Error(err))
+			logger.Error().Err(err).Msg("failed to calculate DAU")
 			return err
 		}
 	}
 	if interval == "month" {
 		if err := s.calculateMAU(ctx, now); err != nil {
-			logger.Error("failed to calculate MAU", zap.Error(err))
+			logger.Error().Err(err).Msg("failed to calculate MAU")
 			return err
 		}
 	}
 
 	if err := s.calculateSourceConversion(ctx, now, interval); err != nil {
-		logger.Error("failed to calculate source conversion", zap.Error(err))
+		logger.Error().Err(err).Msg("failed to calculate source conversion")
 		return err
 	}
 
 	if err := s.calculateChannelConversion(ctx, now, interval); err != nil {
-		logger.Error("failed to calculate channel conversion", zap.Error(err))
+		logger.Error().Err(err).Msg("failed to calculate channel conversion")
 		return err
 	}
 
 	if err := s.calculateAppInstallRate(ctx, now); err != nil {
-		logger.Error("failed to calculate app install rate", zap.Error(err))
+		logger.Error().Err(err).Msg("failed to calculate app install rate")
 		return err
 	}
 
 	if err := s.calculateAutoPaymentRate(ctx, now); err != nil {
-		logger.Error("failed to calculate autopayment rate", zap.Error(err))
+		logger.Error().Err(err).Msg("failed to calculate auto payment rate")
 		return err
 	}
 
@@ -172,10 +169,12 @@ func (s *Service) CalculateAllMetrics(ctx context.Context, interval string) erro
 				Type:     m.Type,
 				Interval: m.Interval,
 			}); err != nil {
-				zap.L().Warn("failed to invalidate metrics cache",
-					zap.String("type", m.Type),
-					zap.String("interval", m.Interval),
-					zap.Error(err))
+				fromContext := log.LoggerFromContext(ctx)
+				fromContext.Warn().
+					Str("type", m.Type).
+					Str("interval", m.Interval).
+					Err(err).
+					Msg("failed to invalidate metrics cache")
 			}
 		}
 	}
@@ -303,10 +302,11 @@ func (s *Service) calculateStageDuration(ctx context.Context, timestamp time.Tim
 }
 
 func (s *Service) aggregateRollBackCount(ctx context.Context, timestamp time.Time, interval string) error {
-	logger := zap.L().Named("service.track.metric").With(
-		zap.String("timestamp", timestamp.Format(time.RFC3339)),
-		zap.String("interval", interval),
-	)
+	logger := log.LoggerFromContext(ctx).With().
+		Str("timestamp", timestamp.Format(time.RFC3339)).
+		Str("interval", interval).
+		Str("component", "service.track.metric").
+		Logger()
 
 	// Verify the interval is valid
 	if interval != "week" && interval != "month" {
@@ -326,9 +326,10 @@ func (s *Service) aggregateRollBackCount(ctx context.Context, timestamp time.Tim
 		endTime = startTime.AddDate(0, 1, 0)
 	}
 
-	logger.Info("Aggregating rollback count",
-		zap.Time("startTime", startTime),
-		zap.Time("endTime", endTime))
+	logger.Info().
+		Time("startTime", startTime).
+		Time("endTime", endTime).
+		Msg("Aggregating rollback count")
 
 	// Get all rollback count metrics for the period
 	dailyMetrics, err := s.MetricRepository.List(ctx, metric.Filters{
@@ -352,9 +353,10 @@ func (s *Service) aggregateRollBackCount(ctx context.Context, timestamp time.Tim
 		totalRollbacks += *m.Value
 	}
 
-	logger.Info("Rollback count aggregation results",
-		zap.Int("metrics_count", len(periodMetrics)),
-		zap.Float64("total_rollbacks", totalRollbacks))
+	logger.Info().
+		Int("metrics_count", len(periodMetrics)).
+		Float64("total_rollbacks", totalRollbacks).
+		Msg("Rollback count aggregation results")
 
 	// Create and store aggregated metric
 	aggregatedMetric, err := s.createMetric("",
@@ -395,7 +397,7 @@ func (s *Service) aggregateRollBackCount(ctx context.Context, timestamp time.Tim
 			if _, err := s.MetricRepository.Update(ctx, m.ID, aggregatedMetric); err != nil {
 				return fmt.Errorf("failed to update existing %s rollback count metric: %w", interval, err)
 			}
-			logger.Info(fmt.Sprintf("Updated existing %s rollback count metric", interval))
+			logger.Info().Msgf("Updated existing %s rollback count metric", interval)
 			break
 		}
 	}
@@ -404,7 +406,7 @@ func (s *Service) aggregateRollBackCount(ctx context.Context, timestamp time.Tim
 		if _, err := s.MetricRepository.Add(ctx, aggregatedMetric); err != nil {
 			return fmt.Errorf("failed to store %s rollback count metric: %w", interval, err)
 		}
-		logger.Info(fmt.Sprintf("Created new %s rollback count metric", interval))
+		logger.Info().Msgf("Created new %s rollback count metric", interval)
 	}
 	return nil
 }
@@ -438,6 +440,7 @@ func firstDayOfISOWeek(year, week int, loc *time.Location) time.Time {
 }
 
 func (s *Service) calculateRollbackCount(ctx context.Context, timestamp time.Time) error {
+	fromContext := log.LoggerFromContext(ctx)
 	todayDate := timestamp.Format("2006-01-02")
 	rollBackCountMetrics, err := s.ListMetrics(ctx, metric.Filters{
 		Type:     string(metric.RollbackCount),
@@ -477,7 +480,7 @@ func (s *Service) calculateRollbackCount(ctx context.Context, timestamp time.Tim
 					Interval: "day",
 				}); err != nil {
 					// Log error but don't fail the operation
-					zap.L().Warn("failed to invalidate metrics cache", zap.Error(err))
+					fromContext.Warn().Err(err).Msg("failed to invalidate metrics cache")
 				}
 			}
 
@@ -503,11 +506,11 @@ func (s *Service) calculateRollbackCount(ctx context.Context, timestamp time.Tim
 				Type:     string(metric.RollbackCount),
 				Interval: "day",
 			}); err != nil {
-				zap.L().Warn("failed to invalidate metrics cache", zap.Error(err))
+				fromContext.Warn().Err(err).Msg("failed to invalidate metrics cache")
 			}
 		}
-
 	}
+
 	s.PrometheusMetrics.RollbackCount.Inc()
 
 	return nil
@@ -544,7 +547,7 @@ func (s *Service) calculateDropout(ctx context.Context, timestamp time.Time, int
 }
 
 func (s *Service) calculateConversion(ctx context.Context, timestamp time.Time, interval string) error {
-	logger := zap.L().Named("service.track.metric.conversion")
+	logger := log.LoggerFromContext(ctx).With().Str("component", "service.track.metric.conversion").Logger()
 
 	stages, err := s.StageRepository.List(ctx)
 	if err != nil {
@@ -571,10 +574,11 @@ func (s *Service) calculateConversion(ctx context.Context, timestamp time.Time, 
 		return fmt.Errorf("invalid interval: %s", interval)
 	}
 
-	logger.Info("Calculating conversion rate",
-		zap.Time("start_date", startDate),
-		zap.Time("end_date", timestamp),
-		zap.String("interval", interval))
+	logger.Info().
+		Time("start_date", startDate).
+		Time("end_date", timestamp).
+		Str("interval", interval).
+		Msg("Calculating conversion rate")
 
 	// Clients who reached last stage within the interval period
 	lastStageRecentCount, err := s.clientRepository.Count(ctx, bson.M{
@@ -604,10 +608,11 @@ func (s *Service) calculateConversion(ctx context.Context, timestamp time.Time, 
 		conversionRate = float64(lastStageRecentCount) / float64(totalClientsCount)
 	}
 
-	logger.Info("Conversion calculation results",
-		zap.Int64("last_stage_count", lastStageRecentCount),
-		zap.Int64("total_count", totalClientsCount),
-		zap.Float64("conversion_rate", conversionRate))
+	logger.Info().
+		Int64("last_stage_count", lastStageRecentCount).
+		Int64("total_count", totalClientsCount).
+		Float64("conversion_rate", conversionRate).
+		Msg("Conversion calculation results")
 
 	m, err := s.createMetric("",
 		metric.Conversion,
@@ -617,11 +622,11 @@ func (s *Service) calculateConversion(ctx context.Context, timestamp time.Time, 
 		nil,
 	)
 	if err != nil {
-		return fmt.Errorf("failed to create conversion metric: %w", err)
+		return err
 	}
 
 	if _, err = s.MetricRepository.Add(ctx, m); err != nil {
-		return fmt.Errorf("failed to store conversion metric: %w", err)
+		return err
 	}
 
 	s.PrometheusMetrics.Conversion.Set(conversionRate)
@@ -677,7 +682,7 @@ func (s *Service) calculateTotalDuration(ctx context.Context, timestamp time.Tim
 }
 
 func (s *Service) calculateStatusUpdates(ctx context.Context, timestamp time.Time, interval string) error {
-	logger := zap.L().Named("service.track.metric.status_updates")
+	logger := log.LoggerFromContext(ctx).With().Str("component", "service.track.metric.status_updates").Logger()
 
 	// Calculate time period based on interval
 	var startDate time.Time
@@ -693,10 +698,11 @@ func (s *Service) calculateStatusUpdates(ctx context.Context, timestamp time.Tim
 		return fmt.Errorf("invalid interval: %s", interval)
 	}
 
-	logger.Info("Calculating status updates",
-		zap.Time("start_date", startDate),
-		zap.Time("end_date", timestamp),
-		zap.String("interval", interval))
+	logger.Info().
+		Time("start_date", startDate).
+		Time("end_date", timestamp).
+		Str("interval", interval).
+		Msg("Calculating status updates")
 
 	// Count clients updated within the specified period
 	count, err := s.clientRepository.Count(ctx, bson.M{
@@ -709,9 +715,10 @@ func (s *Service) calculateStatusUpdates(ctx context.Context, timestamp time.Tim
 		return fmt.Errorf("failed to count status updates: %w", err)
 	}
 
-	logger.Info("Status updates calculation results",
-		zap.Int64("count", count),
-		zap.String("interval", interval))
+	logger.Info().
+		Int64("count", count).
+		Str("interval", interval).
+		Msg("Status updates calculation results")
 
 	// Create and store the metric
 	m, err := s.createMetric("", metric.StatusUpdates, float64(count), interval, timestamp, nil)
@@ -729,11 +736,11 @@ func (s *Service) calculateStatusUpdates(ctx context.Context, timestamp time.Tim
 }
 
 func (s *Service) calculateSourceConversion(ctx context.Context, timestamp time.Time, interval string) error {
-	logger := zap.L().Named("service.track.metric.source_conversion")
+	logger := log.LoggerFromContext(ctx).With().Str("component", "service.track.metric.source_conversion").Logger()
 
 	stages, err := s.StageRepository.List(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to list stages: %w", err)
+		return err
 	}
 
 	if len(stages) < 2 {
@@ -753,18 +760,19 @@ func (s *Service) calculateSourceConversion(ctx context.Context, timestamp time.
 	case "month":
 		startDate = time.Date(timestamp.Year(), timestamp.Month(), 1, 0, 0, 0, 0, timestamp.Location())
 	default:
-		return fmt.Errorf("invalid interval: %s", interval)
+		return err
 	}
 
-	logger.Info("Calculating source conversion",
-		zap.Time("start_date", startDate),
-		zap.Time("end_date", timestamp),
-		zap.String("interval", interval))
+	logger.Info().
+		Time("start_date", startDate).
+		Time("end_date", timestamp).
+		Str("interval", interval).
+		Msg("Calculating source conversion")
 
 	// Get clients active within the time period
 	clients, _, err := s.clientRepository.List(ctx, client.Filters{}, 0, 0)
 	if err != nil {
-		return fmt.Errorf("failed to list clients: %w", err)
+		return err
 	}
 
 	// Collect unique sources
@@ -792,7 +800,7 @@ func (s *Service) calculateSourceConversion(ctx context.Context, timestamp time.
 			},
 		})
 		if err != nil {
-			return fmt.Errorf("failed to count clients with source %s: %w", source, err)
+			return err
 		}
 
 		// Count completed clients from this source active in the period
@@ -805,7 +813,7 @@ func (s *Service) calculateSourceConversion(ctx context.Context, timestamp time.
 			},
 		})
 		if err != nil {
-			return fmt.Errorf("failed to count completed clients with source %s: %w", source, err)
+			return err
 		}
 
 		var conversionRate float64
@@ -813,11 +821,12 @@ func (s *Service) calculateSourceConversion(ctx context.Context, timestamp time.
 			conversionRate = float64(completed) / float64(total)
 		}
 
-		logger.Info("Source conversion calculation results",
-			zap.String("source", source),
-			zap.Int64("total", total),
-			zap.Int64("completed", completed),
-			zap.Float64("conversion_rate", conversionRate))
+		logger.Info().
+			Str("source", source).
+			Int64("total", total).
+			Int64("completed", completed).
+			Float64("conversion_rate", conversionRate).
+			Msg("Source conversion calculation results")
 
 		m, err := s.createMetric("",
 			metric.SourceConversion,
@@ -843,7 +852,7 @@ func (s *Service) calculateSourceConversion(ctx context.Context, timestamp time.
 
 // calculateSourceConversion calculates the conversion rate for each source
 func (s *Service) calculateChannelConversion(ctx context.Context, timestamp time.Time, interval string) error {
-	logger := zap.L().Named("service.track.metric.channel_conversion")
+	logger := log.LoggerFromContext(ctx).With().Str("component", "service.track.metric.channel_conversion").Logger()
 
 	stages, err := s.StageRepository.List(ctx)
 	if err != nil {
@@ -870,10 +879,11 @@ func (s *Service) calculateChannelConversion(ctx context.Context, timestamp time
 		return fmt.Errorf("invalid interval: %s", interval)
 	}
 
-	logger.Info("Calculating channel conversion",
-		zap.Time("start_date", startDate),
-		zap.Time("end_date", timestamp),
-		zap.String("interval", interval))
+	logger.Info().
+		Time("start_date", startDate).
+		Time("end_date", timestamp).
+		Str("interval", interval).
+		Msg("Calculating channel conversion")
 
 	// Get clients active within the time period
 	clients, _, err := s.clientRepository.List(ctx, client.Filters{}, 0, 0)
@@ -927,11 +937,12 @@ func (s *Service) calculateChannelConversion(ctx context.Context, timestamp time
 			conversionRate = float64(completed) / float64(total)
 		}
 
-		logger.Info("Channel conversion calculation results",
-			zap.String("channel", channel),
-			zap.Int64("total", total),
-			zap.Int64("completed", completed),
-			zap.Float64("conversion_rate", conversionRate))
+		logger.Info().
+			Str("channel", channel).
+			Int64("total", total).
+			Int64("completed", completed).
+			Float64("conversion_rate", conversionRate).
+			Msg("Channel conversion calculation results")
 
 		m, err := s.createMetric("",
 			metric.ChannelConversion,

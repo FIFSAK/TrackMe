@@ -70,7 +70,7 @@ func (r *StageRepository) List(ctx context.Context) ([]stage.Entity, error) {
 			return true // continue iteration
 		}
 		stages = append(stages, stageEntity)
-		return true // continue iteration
+		return true
 	})
 
 	return stages, nil

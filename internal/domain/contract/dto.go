@@ -1,7 +1,7 @@
 package contract
 
 import (
-	autopayment "TrackMe/internal/domain/autopayment"
+	"TrackMe/internal/domain/autopayment"
 	"errors"
 	"net/http"
 	"time"

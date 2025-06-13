@@ -23,7 +23,7 @@ type Response struct {
 	Highlight bool   `json:"highlight"`
 }
 
-// ParseFromEntity converts a auto payment entity to a response payload.
+// ParseFromEntity converts an auto payment entity to a response payload.
 func ParseFromEntity(data Entity) Response {
 	highlight := false
 	if data.Status == "disabled" {

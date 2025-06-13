@@ -77,25 +77,3 @@ func WithMongoStore(uri, name string) Configuration {
 		return
 	}
 }
-
-//
-//// WithPostgresStore applies a mongo store to the Repository
-//func WithPostgresStore(dataSourceName string) Configuration {
-//	return func(s *Repository) (err error) {
-//		// Create the mongo store, if we needed parameters, such as connection strings they could be inputted here
-//		s.postgres, err = store.NewSQL(dataSourceName)
-//		if err != nil {
-//			return
-//		}
-//
-//		if err = store.Migrate(dataSourceName); err != nil {
-//			return
-//		}
-//
-//		s.Author = postgres.NewAuthorRepository(s.postgres.Client)
-//		s.Book = postgres.NewBookRepository(s.postgres.Client)
-//		s.Member = postgres.NewMemberRepository(s.postgres.Client)
-//
-//		return
-//	}
-//}

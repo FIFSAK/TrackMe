@@ -22,6 +22,15 @@ func OK(w http.ResponseWriter, r *http.Request, data any, meta any) {
 	render.JSON(w, r, v)
 }
 
+func Created(w http.ResponseWriter, r *http.Request, data any) {
+	render.Status(r, http.StatusCreated)
+
+	v := Object{
+		Data: data,
+	}
+	render.JSON(w, r, v)
+}
+
 func BadRequest(w http.ResponseWriter, r *http.Request, err error, data any) {
 	render.Status(r, http.StatusBadRequest)
 

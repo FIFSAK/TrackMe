@@ -11,12 +11,9 @@ import (
 	"TrackMe/pkg/log"
 	"TrackMe/pkg/server"
 	"context"
-	"errors"
 	"flag"
 	"fmt"
-	"github.com/golang-migrate/migrate/v4"
 	_ "go.mongodb.org/mongo-driver/bson"
-	"go.uber.org/zap"
 	"os"
 	"os/signal"
 	"syscall"
@@ -29,20 +26,20 @@ func Run() {
 
 	configs, err := config.New()
 	if err != nil {
-		logger.Error("ERR_INIT_CONFIGS", zap.Error(err))
+		logger.Error().Err(err).Msg("ERR_INIT_CONFIGS")
 		return
 	}
 
-	if err = runMigrations(configs.MONGO.DSN); err != nil {
-		logger.Error("ERR_RUN_MIGRATIONS", zap.Error(err))
-		return
-	}
+	//if err = runMigrations(configs.MONGO.DSN); err != nil {
+	//	logger.Error().Err(err).Msg("ERR_RUN_MIGRATIONS")
+	//	return
+	//}
 
 	promMetrics := prometheus.New()
 	repositories, err := repository.New(
 		repository.WithMongoStore(configs.MONGO.DSN, "name"), repository.WithMemoryStore())
 	if err != nil {
-		logger.Error("ERR_INIT_REPOSITORIES", zap.Error(err))
+		logger.Error().Err(err).Msg("ERR_INIT_REPOSITORIES")
 		return
 	}
 	defer repositories.Close()
@@ -53,7 +50,7 @@ func Run() {
 		},
 		cache.WithRedisStore(configs.Redis.URL))
 	if err != nil {
-		logger.Error("ERR_INIT_CACHES", zap.Error(err))
+		logger.Error().Err(err).Msg("ERR_INIT_CACHES")
 		return
 	}
 	defer caches.Close()
@@ -61,7 +58,7 @@ func Run() {
 	trackService, err := track.New(
 		track.WithClientRepository(repositories.Client), track.WithStageRepository(repositories.Stage), track.WithMetricRepository(repositories.Metric), track.WithPrometheusMetrics(promMetrics), track.WithMetricCache(caches.Metric))
 	if err != nil {
-		logger.Error("ERR_INIT_LIBRARY_SERVICE", zap.Error(err))
+		logger.Error().Err(err).Msg("ERR_INIT_LIBRARY_SERVICE")
 		return
 	}
 
@@ -72,14 +69,14 @@ func Run() {
 		},
 		handler.WithHTTPHandler())
 	if err != nil {
-		logger.Error("ERR_INIT_HANDLERS", zap.Error(err))
+		logger.Error().Err(err).Msg("ERR_INIT_HANDLERS")
 		return
 	}
 
 	servers, err := server.New(
 		server.WithHTTPServer(handlers.HTTP, configs.APP.Port))
 	if err != nil {
-		logger.Error("ERR_INIT_SERVERS", zap.Error(err))
+		logger.Error().Err(err).Msg("ERR_INIT_SERVERS")
 		return
 	}
 
@@ -88,10 +85,10 @@ func Run() {
 
 	// Run our server in a goroutine so that it doesn't block
 	if err = servers.Run(logger); err != nil {
-		logger.Error("ERR_RUN_SERVERS", zap.Error(err))
+		logger.Error().Err(err).Msg("ERR_RUN_SERVERS")
 		return
 	}
-	logger.Info("http server started on http://localhost:" + configs.APP.Port + "/swagger/index.html")
+	logger.Info().Str("url", "http://localhost:"+configs.APP.Port).Msg("http server started")
 
 	// Graceful Shutdown
 	var wait time.Duration
@@ -125,30 +122,30 @@ func Run() {
 	fmt.Println("server was successful shutdown.")
 }
 
-// runMigrations applies MongoDB migrations from the migrations directory
-func runMigrations(dsn string) error {
-	migrationPath := "file://migrations/mongo"
-	m, err := migrate.New(migrationPath, dsn)
-	if err != nil {
-		return fmt.Errorf("failed to create migration instance: %w", err)
-	}
-
-	// Check for dirty database state
-	version, dirty, err := m.Version()
-	if err != nil && !errors.Is(err, migrate.ErrNilVersion) {
-		return fmt.Errorf("failed to get migration version: %w", err)
-	}
-
-	// Force the version if the database is in a dirty state
-	if dirty {
-		if err = m.Force(int(version)); err != nil {
-			return fmt.Errorf("failed to force migration version: %w", err)
-		}
-	}
-
-	if err = m.Up(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
-		return fmt.Errorf("failed to apply migrations: %w", err)
-	}
-
-	return nil
-}
+//// runMigrations applies MongoDB migrations from the migrations directory
+//func runMigrations(dsn string) error {
+//	migrationPath := "file://migrations/mongo"
+//	m, err := migrate.New(migrationPath, dsn)
+//	if err != nil {
+//		return fmt.Errorf("failed to create migration instance: %w", err)
+//	}
+//
+//	// Check for dirty database state
+//	version, dirty, err := m.Version()
+//	if err != nil && !errors.Is(err, migrate.ErrNilVersion) {
+//		return fmt.Errorf("failed to get migration version: %w", err)
+//	}
+//
+//	// Force the version if the database is in a dirty state
+//	if dirty {
+//		if err = m.Force(int(version)); err != nil {
+//			return fmt.Errorf("failed to force migration version: %w", err)
+//		}
+//	}
+//
+//	if err = m.Up(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
+//		return fmt.Errorf("failed to apply migrations: %w", err)
+//	}
+//
+//	return nil
+//}

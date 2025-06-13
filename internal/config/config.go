@@ -64,6 +64,10 @@ func New() (cfg Configs, err error) {
 		URL: os.Getenv("REDIS_URL"),
 	}
 
+	cfg.MONGO = StoreConfig{
+		DSN: os.Getenv("MONGO_DSN"),
+	}
+
 	if err = envconfig.Process("APP", &cfg.APP); err != nil {
 		return
 	}

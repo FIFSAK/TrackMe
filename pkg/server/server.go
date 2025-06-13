@@ -3,10 +3,10 @@ package server
 import (
 	"context"
 	"fmt"
+	"github.com/rs/zerolog"
 	"net"
 	"net/http"
 
-	"go.uber.org/zap"
 	"google.golang.org/grpc"
 )
 
@@ -35,11 +35,11 @@ func New(configs ...Configuration) (r *Server, err error) {
 	return
 }
 
-func (s *Server) Run(logger *zap.Logger) (err error) {
+func (s *Server) Run(logger zerolog.Logger) (err error) {
 	if s.http != nil {
 		go func() {
 			if err = s.http.ListenAndServe(); err != nil {
-				logger.Error("ERR_SERVE_HTTP", zap.Error(err))
+				logger.Error().Err(err).Msg("ERR_SERVE_HTTP")
 				return
 			}
 		}()
@@ -48,7 +48,7 @@ func (s *Server) Run(logger *zap.Logger) (err error) {
 	if s.grpc != nil {
 		go func() {
 			if err = s.grpc.Serve(s.listener); err != nil {
-				logger.Error("ERR_SERVE_GRPC", zap.Error(err))
+				logger.Error().Err(err).Msg("ERR_SERVE_GRPC")
 				return
 			}
 		}()

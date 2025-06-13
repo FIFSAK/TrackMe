@@ -4,7 +4,7 @@ build:
 
 # Запуск контейнеров
 up:
-	docker-compose up -d
+	docker-compose up -d --build
 
 # Остановка и удаление контейнеров
 down:

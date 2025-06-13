@@ -1,18 +1,15 @@
 package mongo
 
 import (
+	"TrackMe/internal/domain/client"
+	"TrackMe/pkg/store"
 	"context"
 	"errors"
-	"fmt"
-	"go.mongodb.org/mongo-driver/mongo/options"
-	"time"
-
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
-
-	"TrackMe/internal/domain/client"
-	"TrackMe/pkg/store"
+	"go.mongodb.org/mongo-driver/mongo/options"
+	"time"
 )
 
 // ClientRepository handles CRUD operations for client in a MongoDB database.
@@ -65,9 +62,6 @@ func (r *ClientRepository) List(ctx context.Context, filters client.Filters, lim
 		filter["last_login"] = bson.M{"$gte": filters.LastLoginAfter}
 	}
 
-	// Add debugging to see what filter is being applied
-	fmt.Printf("MongoDB filter: %+v\n", filter)
-
 	opts := options.Find().
 		SetLimit(int64(limit)).
 		SetSkip(int64(offset)).
@@ -91,9 +85,6 @@ func (r *ClientRepository) List(ctx context.Context, filters client.Filters, lim
 	if err = cur.All(ctx, &clients); err != nil {
 		return nil, 0, err
 	}
-
-	// Debug the results
-	fmt.Printf("Found %d clients in MongoDB\n", len(clients))
 
 	return clients, int(total), nil
 }

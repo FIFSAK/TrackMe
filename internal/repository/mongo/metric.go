@@ -1,17 +1,15 @@
 package mongo
 
 import (
+	"TrackMe/internal/domain/metric"
+	"TrackMe/pkg/store"
 	"context"
 	"errors"
-	"fmt"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"time"
-
-	"TrackMe/internal/domain/metric"
-	"TrackMe/pkg/store"
 )
 
 // MetricRepository handles CRUD operations for metric in a MongoDB database.
@@ -36,8 +34,6 @@ func (r *MetricRepository) List(ctx context.Context, filters metric.Filters) ([]
 		filter["interval"] = filters.Interval
 	}
 
-	fmt.Printf("MongoDB filter: %+v\n", filter)
-
 	opts := options.Find()
 
 	cur, err := r.db.Find(ctx, filter, opts)
@@ -51,9 +47,6 @@ func (r *MetricRepository) List(ctx context.Context, filters metric.Filters) ([]
 		return nil, err
 	}
 
-	// Debug the results
-	fmt.Printf("Found %d metrics in MongoDB\n", len(metrics))
-
 	return metrics, nil
 }
 
@@ -61,7 +54,7 @@ func (r *MetricRepository) List(ctx context.Context, filters metric.Filters) ([]
 func (r *MetricRepository) Add(ctx context.Context, data metric.Entity) (string, error) {
 	objId, err := primitive.ObjectIDFromHex(data.ID)
 	if err != nil {
-		return "", fmt.Errorf("invalid ID format: %w", err)
+		return "", err
 	}
 	res, err := r.db.InsertOne(ctx, bson.M{"_id": objId, "type": data.Type, "value": data.Value, "interval": data.Interval, "created_at": data.CreatedAt, "updated_at": time.Now()})
 	if err != nil {
