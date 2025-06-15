@@ -55,7 +55,18 @@ Content-Type: application/json
   "channel": "friend",
   "app": "installed",
   "last_login": "2023-06-15T15:30:00Z",
-  "contracts": []
+  "contracts": [
+    {
+      "name": "Подписка на сервис",
+      "number": "SUB12345",
+      "status": "active",
+      "conclusion_date": "2025-06-01T12:00:00Z",
+      "expiration_date": "2026-06-01T12:00:00Z",
+      "amount": 10000.00,
+      "payment_frequency": "monthly",
+      "autopayment": "disabled"
+    }
+  ]
 }
 
 ### Add client20 - terms agreement stage
@@ -221,4 +232,20 @@ Content-Type: application/json
   "app": "installed",
   "last_login": "2023-06-17T11:45:00Z",
   "contracts": []
+}
+
+### Move client22 to next stage (approval_waiting -> modifications)
+PUT http://localhost/api/v1/clients/507f1f77bcf86cd799439045/stage
+Content-Type: application/json
+
+{
+  "stage": "modifications"
+}
+
+### Move client22 to next stage (approval_waiting -> modifications)
+PUT http://localhost/api/v1/clients/507f1f77bcf86cd799439046/stage
+Content-Type: application/json
+
+{
+  "stage": "modifications"
 }

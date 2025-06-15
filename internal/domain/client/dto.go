@@ -57,14 +57,23 @@ type Response struct {
 
 // ParseFromEntity converts a client entity to a response payload.
 func ParseFromEntity(data Entity) Response {
-	appEntity := app.Entity{Status: *data.App}
 	parsedRegistrationDate := data.RegistrationDate.Format(time.RFC3339)
-	if *data.App == "installed" {
-		parsedRegistrationDate = data.RegistrationDate.UTC().Format("02.01.2006")
+
+	var appEntity app.Entity
+	if data.App != nil {
+		appEntity = app.Entity{Status: *data.App}
+		if *data.App == "installed" {
+			parsedRegistrationDate = data.RegistrationDate.UTC().Format("02.01.2006")
+		}
 	}
-	lastLoginEntity := lastLogin.Entity{
-		Date: *data.LastLogin,
+
+	var lastLoginEntity lastLogin.Entity
+	if data.LastLogin != nil {
+		lastLoginEntity = lastLogin.Entity{
+			Date: *data.LastLogin,
+		}
 	}
+
 	return Response{
 		ID:               data.ID,
 		Name:             *data.Name,

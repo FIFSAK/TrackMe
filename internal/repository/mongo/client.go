@@ -139,6 +139,9 @@ func prepareUpdateFields(data client.Entity) bson.M {
 	if data.IsActive != nil {
 		isActiveDefault = *data.IsActive
 	}
+	if *data.Name == "" {
+		*data.Name = "Guest_" + data.ID
+	}
 	fields := bson.M{
 		"name":          data.Name,
 		"email":         data.Email,

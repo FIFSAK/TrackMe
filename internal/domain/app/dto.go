@@ -28,7 +28,7 @@ func ParseFromEntity(data Entity) Response {
 	highlight := false
 	if data.Status == "" {
 		return Response{
-			Status:    "unknown",
+			Status:    "",
 			Highlight: false,
 		}
 	}

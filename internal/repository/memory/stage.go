@@ -92,36 +92,48 @@ func (r *StageRepository) Get(ctx context.Context, id string) (stage.Entity, err
 
 // UpdateStage returns the next or previous stage ID based on the given option
 func (r *StageRepository) UpdateStage(ctx context.Context, currentStageID, direction string) (string, error) {
-
-	currentStage, ok := r.db.Load(currentStageID)
-	if !ok {
-		return "", fmt.Errorf("current stage not found: %s", currentStageID)
-	}
-	currentStageEntity, ok := currentStage.(stage.Entity)
-	if !ok {
-		return "", fmt.Errorf("current stage not found or invalid type: %s", currentStageID)
-	}
-	if direction != "next" && direction != "prev" {
+	if currentStageID == "" && direction != "prev" && direction != "next" {
 		newStage, ok := r.db.Load(direction)
 		if !ok {
 			return "", fmt.Errorf("invalid direction: %s", direction)
 		}
 		return newStage.(stage.Entity).ID, nil
 
-	}
-	if direction == "next" {
-		nextStage, err := r.Get(ctx, currentStageEntity.AllowedTransitions[1])
-		if err != nil {
-			return "", fmt.Errorf("failed to get next stage: %w", err)
+	} else if currentStageID != "" {
+		currentStage, ok := r.db.Load(currentStageID)
+		if !ok {
+			return "", fmt.Errorf("current stage not found: %s", currentStageID)
 		}
-		return nextStage.ID, nil
+		currentStageEntity, ok := currentStage.(stage.Entity)
+		if !ok {
+			return "", fmt.Errorf("current stage not found or invalid type: %s", currentStageID)
+		}
+		if direction == "next" {
+			nextStage, err := r.Get(ctx, currentStageEntity.AllowedTransitions[1])
+			if err != nil {
+				return "", fmt.Errorf("failed to get next stage: %w", err)
+			}
+			return nextStage.ID, nil
 
+		}
+		if direction == "prev" {
+			prevStage, err := r.Get(ctx, currentStageEntity.AllowedTransitions[0])
+			if err != nil {
+				return "", fmt.Errorf("failed to get previous stage: %w", err)
+			}
+			return prevStage.ID, nil
+		}
+		validStages, err := r.List(ctx)
+		if err != nil {
+			return "", fmt.Errorf("failed to list stages: %w", err)
+		}
+		for _, stageEntity := range validStages {
+			if stageEntity.ID == direction {
+				return stageEntity.ID, nil
+			}
+		}
+
+		return "", fmt.Errorf("invalid direction: %s", direction)
 	}
-	prevStage, err := r.Get(ctx, currentStageEntity.AllowedTransitions[0])
-	if err != nil {
-		return "", fmt.Errorf("failed to get previous stage: %w", err)
-	}
-
-	return prevStage.ID, nil
-
+	return "", fmt.Errorf("invalid current stage ID or direction: %s", direction)
 }

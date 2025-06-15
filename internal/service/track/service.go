@@ -36,11 +36,11 @@ func New(configs ...Configuration) (s *Service, err error) {
 }
 
 // WithClientRepository applies a given client repository to the Service
-func WithClientRepository(authorRepository client.Repository) Configuration {
+func WithClientRepository(clientRepository client.Repository) Configuration {
 	// return a function that matches the Configuration alias,
 	// You need to return this so that the parent function can take in all the needed parameters
 	return func(s *Service) error {
-		s.clientRepository = authorRepository
+		s.clientRepository = clientRepository
 		return nil
 	}
 }

@@ -59,7 +59,8 @@ func (s *Service) UpdateClient(ctx context.Context, id string, req client.Reques
 		updated.RegistrationDate = existing.RegistrationDate
 	}
 	if existing.CurrentStage == nil {
-		*existing.CurrentStage = ""
+		emptyStage := ""
+		existing.CurrentStage = &emptyStage
 	}
 
 	newStage, err := s.StageRepository.UpdateStage(ctx, *existing.CurrentStage, req.Stage)

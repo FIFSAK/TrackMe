@@ -37,7 +37,8 @@ func (w *MetricWorker) Start() {
 	logger.Info().Msg("Starting metric worker")
 
 	// Run daily calculations at midnight
-	_, err := w.cron.AddFunc("0 0 * * *", func() {
+	_, err := w.cron.AddFunc("0 0 0 * * *", func() {
+		logger.Info().Msg("Running daily metric calculations")
 		logger.Info().Msg("Running daily metric calculations")
 		w.wg.Add(1)
 		defer w.wg.Done()
@@ -55,7 +56,7 @@ func (w *MetricWorker) Start() {
 	}
 
 	// Run weekly calculations on Sunday at midnight
-	_, err = w.cron.AddFunc("0 0 * * 0", func() {
+	_, err = w.cron.AddFunc("0 0 0 * * 0", func() {
 		logger.Info().Msg("Running weekly metric calculations")
 		w.wg.Add(1)
 		defer w.wg.Done()
@@ -67,10 +68,12 @@ func (w *MetricWorker) Start() {
 			logger.Error().Err(err).Msg("Failed to calculate weekly metrics")
 		}
 	})
-	logger.Error().Err(err).Msg("Failed to schedule weekly metrics")
+	if err != nil {
+		logger.Error().Err(err).Msg("Failed to schedule weekly metrics")
+	}
 
 	// Run monthly calculations on the 1st of each month at midnight
-	_, err = w.cron.AddFunc("0 0 1 * *", func() {
+	_, err = w.cron.AddFunc("0 0 0 1 * *", func() {
 		logger.Info().Msg("Running monthly metric calculations")
 		w.wg.Add(1)
 		defer w.wg.Done()
@@ -82,7 +85,9 @@ func (w *MetricWorker) Start() {
 			logger.Error().Err(err).Msg("Failed to calculate monthly metrics")
 		}
 	})
-	logger.Error().Err(err).Msg("Failed to schedule monthly metrics")
+	if err != nil {
+		logger.Error().Err(err).Msg("Failed to schedule monthly metrics")
+	}
 	// Start the cron scheduler
 	w.cron.Start()
 }
