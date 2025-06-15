@@ -9,7 +9,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
-	"time"
 )
 
 // ClientRepository handles CRUD operations for client in a MongoDB database.
@@ -123,7 +122,7 @@ func (r *ClientRepository) Update(ctx context.Context, id string, data client.En
 			"last_login":    data.LastLogin,
 			"contracts":     data.Contracts,
 		},
-		"$setOnInsert": bson.M{"registration_date": time.Now()},
+		"$setOnInsert": bson.M{"registration_date": data.RegistrationDate},
 	}
 
 	opts := options.FindOneAndUpdate().

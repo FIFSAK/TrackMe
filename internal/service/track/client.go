@@ -54,6 +54,9 @@ func (s *Service) UpdateClient(ctx context.Context, id string, req client.Reques
 
 	updated := client.New(req)
 	updated.ID = id
+	now := time.Now()
+
+	updated.RegistrationDate = &now
 
 	if existing.RegistrationDate != nil {
 		updated.RegistrationDate = existing.RegistrationDate
@@ -87,8 +90,6 @@ func (s *Service) UpdateClient(ctx context.Context, id string, req client.Reques
 	if *updated.Name == "" {
 		*updated.Name = "Guest_" + updated.ID
 	}
-
-	now := time.Now()
 
 	updated.LastUpdated = &now
 
