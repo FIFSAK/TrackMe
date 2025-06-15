@@ -81,6 +81,17 @@ func (s *Service) UpdateClient(ctx context.Context, id string, req client.Reques
 		}
 	}
 
+	if updated.IsActive != nil {
+		*updated.IsActive = true
+	}
+	if *updated.Name == "" {
+		*updated.Name = "Guest_" + updated.ID
+	}
+
+	now := time.Now()
+
+	updated.LastUpdated = &now
+
 	result, err := s.clientRepository.Update(ctx, id, updated)
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to update client")

@@ -111,7 +111,18 @@ func (r *ClientRepository) Update(ctx context.Context, id string, data client.En
 	}
 
 	update := bson.M{
-		"$set":         prepareUpdateFields(data),
+		"$set": bson.M{
+			"name":          data.Name,
+			"email":         data.Email,
+			"current_stage": data.CurrentStage,
+			"last_updated":  data.LastUpdated,
+			"is_active":     data.IsActive,
+			"source":        data.Source,
+			"channel":       data.Channel,
+			"app":           data.App,
+			"last_login":    data.LastLogin,
+			"contracts":     data.Contracts,
+		},
 		"$setOnInsert": bson.M{"registration_date": time.Now()},
 	}
 
@@ -132,63 +143,6 @@ func (r *ClientRepository) Update(ctx context.Context, id string, data client.En
 	}
 
 	return updated, nil
-}
-
-func prepareUpdateFields(data client.Entity) bson.M {
-	isActiveDefault := true
-	if data.IsActive != nil {
-		isActiveDefault = *data.IsActive
-	}
-	if *data.Name == "" {
-		*data.Name = "Guest_" + data.ID
-	}
-	fields := bson.M{
-		"name":          data.Name,
-		"email":         data.Email,
-		"current_stage": data.CurrentStage,
-		"last_updated":  time.Now(),
-		"is_active":     isActiveDefault,
-		"source":        data.Source,
-		"channel":       data.Channel,
-		"app":           data.App,
-		"last_login":    data.LastLogin,
-	}
-
-	if len(data.Contracts) > 0 {
-		fields["contracts"] = data.Contracts
-	}
-
-	return fields
-}
-
-// prepareArgs prepares the update arguments for the MongoDB query.
-func (r *ClientRepository) prepareArgs(data client.Entity) bson.M {
-	args := bson.M{}
-	if data.Name != nil {
-		args["name"] = data.Name
-	}
-	if data.Email != nil {
-		args["email"] = data.Email
-	}
-	if data.CurrentStage != nil {
-		args["current_stage"] = data.CurrentStage
-	}
-	if data.RegistrationDate != nil {
-		args["registration_date"] = data.RegistrationDate
-	}
-	if data.LastUpdated != nil {
-		args["last_updated"] = data.LastUpdated
-	}
-	if data.IsActive != nil {
-		args["is_active"] = data.IsActive
-	}
-	if data.Source != nil {
-		args["source"] = data.Source
-	}
-	if data.Channel != nil {
-		args["channel"] = data.Channel
-	}
-	return args
 }
 
 func (r *ClientRepository) Count(ctx context.Context, filter bson.M) (int64, error) {
