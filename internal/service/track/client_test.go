@@ -14,7 +14,6 @@ import (
 	"time"
 )
 
-// Mock repositories
 type MockClientRepository struct {
 	mock.Mock
 }
@@ -77,7 +76,6 @@ func (m *MockMetricRepository) Update(ctx context.Context, id string, data metri
 	return args.Get(0).(metric.Entity), args.Error(1)
 }
 
-// Test suite
 type ClientServiceTestSuite struct {
 	suite.Suite
 	service              *Service
@@ -112,7 +110,6 @@ func (suite *ClientServiceTestSuite) TestListClients() {
 	limit := 10
 	offset := 0
 
-	// Setup mock data
 	name1 := "John Doe"
 	email1 := "john@example.com"
 	stage1 := "registration"
@@ -165,13 +162,10 @@ func (suite *ClientServiceTestSuite) TestListClients() {
 		},
 	}
 
-	// Setup expectations
 	suite.clientRepositoryMock.On("List", ctx, filters, limit, offset).Return(entities, 2, nil)
 
-	// Call the service
 	responses, total, err := suite.service.ListClients(ctx, filters, limit, offset)
 
-	// Assertions
 	suite.NoError(err)
 	suite.Equal(2, total)
 	suite.Len(responses, 2)
@@ -185,7 +179,6 @@ func (suite *ClientServiceTestSuite) TestUpdateClient() {
 	ctx := context.Background()
 	clientID := "client123"
 
-	// Setup existing client
 	regDate := time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC)
 	currentStage := "registration"
 	isActive := false
@@ -206,7 +199,6 @@ func (suite *ClientServiceTestSuite) TestUpdateClient() {
 		LastLogin:        &lastLogin,
 	}
 
-	// Setup request
 	name := "Updated Name"
 	email := "updated@example.com"
 	newIsActive := true
@@ -226,21 +218,18 @@ func (suite *ClientServiceTestSuite) TestUpdateClient() {
 		LastLogin: newLastLogin,
 	}
 
-	// Setup new stage expectation
 	newStage := "onboarding"
 	suite.stageRepositoryMock.On("UpdateStage", ctx, currentStage, req.Stage).Return(newStage, nil)
 
-	// Setup get and update expectations
 	suite.clientRepositoryMock.On("Get", ctx, clientID).Return(existingClient, nil)
 
-	// Use AnythingOfType to match any entity without strict field checks
 	suite.clientRepositoryMock.On(
 		"Update",
 		ctx,
 		clientID,
 		mock.AnythingOfType("client.Entity"),
 	).Run(func(args mock.Arguments) {
-		// Verify important fields in the entity
+
 		entity := args.Get(2).(client.Entity)
 		suite.Equal(clientID, entity.ID)
 		suite.Equal(name, *entity.Name)
@@ -251,7 +240,7 @@ func (suite *ClientServiceTestSuite) TestUpdateClient() {
 		suite.Equal(newChannel, *entity.Channel)
 		suite.Equal(newApp, *entity.App)
 		suite.NotNil(entity.LastLogin)
-		// LastUpdated should be set to a non-nil time
+
 		suite.NotNil(entity.LastUpdated)
 	}).Return(client.Entity{
 		ID:               clientID,
@@ -264,14 +253,12 @@ func (suite *ClientServiceTestSuite) TestUpdateClient() {
 		Channel:          &newChannel,
 		App:              &newApp,
 		LastLogin:        &newLastLogin,
-		LastUpdated:      &now,                // Include LastUpdated in the return
-		Contracts:        []contract.Entity{}, // Return empty contracts
+		LastUpdated:      &now,
+		Contracts:        []contract.Entity{},
 	}, nil)
 
-	// Call the service
 	response, err := suite.service.UpdateClient(ctx, clientID, req)
 
-	// Assertions
 	suite.NoError(err)
 	suite.Equal(clientID, response.ID)
 	suite.Equal(name, response.Name)
@@ -281,7 +268,7 @@ func (suite *ClientServiceTestSuite) TestUpdateClient() {
 	suite.Equal(newChannel, response.Channel)
 	suite.Equal(newIsActive, response.IsActive)
 	suite.Equal("installed", response.App.Status)
-	// Update assertion to match expected empty contracts
+
 	suite.Equal(0, len(response.Contracts))
 }
 
@@ -289,7 +276,6 @@ func (suite *ClientServiceTestSuite) TestUpdateClientRollback() {
 	ctx := context.Background()
 	clientID := "client123"
 
-	// Setup existing client with all necessary fields to avoid nil pointer dereference
 	currentStage := "onboarding"
 	name := "Test Client"
 	email := "test@example.com"
@@ -314,16 +300,13 @@ func (suite *ClientServiceTestSuite) TestUpdateClientRollback() {
 		Contracts:        []contract.Entity{},
 	}
 
-	// Setup request for rollback
 	req := client.Request{
-		Stage: "prev", // Move back
+		Stage: "prev",
 	}
 
-	// Setup new stage expectation
 	prevStage := "registration"
 	suite.stageRepositoryMock.On("UpdateStage", ctx, currentStage, req.Stage).Return(prevStage, nil)
 
-	// Mock metric calls that happen during rollback
 	suite.metricRepositoryMock.On("List", ctx, metric.Filters{
 		Type:     "rollback-count",
 		Interval: "day",
@@ -331,10 +314,8 @@ func (suite *ClientServiceTestSuite) TestUpdateClientRollback() {
 
 	suite.metricRepositoryMock.On("Add", ctx, mock.AnythingOfType("metric.Entity")).Return("metric123", nil)
 
-	// Setup get and update expectations
 	suite.clientRepositoryMock.On("Get", ctx, clientID).Return(existingClient, nil)
 
-	// Return properly populated entity to avoid nil pointer issues
 	suite.clientRepositoryMock.On(
 		"Update",
 		ctx,
@@ -356,10 +337,8 @@ func (suite *ClientServiceTestSuite) TestUpdateClientRollback() {
 		RegistrationDate: &now,
 	}, nil)
 
-	// Call the service
 	response, err := suite.service.UpdateClient(ctx, clientID, req)
 
-	// Assertions
 	suite.NoError(err)
 	suite.Equal(prevStage, response.CurrentStage)
 }
@@ -371,7 +350,6 @@ func (suite *ClientServiceTestSuite) TestListClientsWithStageFilter() {
 	limit := 10
 	offset := 0
 
-	// Setup mock data with all required fields
 	name1 := "John Doe"
 	email1 := "john@example.com"
 	stage1 := "onboarding"
@@ -398,13 +376,10 @@ func (suite *ClientServiceTestSuite) TestListClientsWithStageFilter() {
 		},
 	}
 
-	// Setup expectations
 	suite.clientRepositoryMock.On("List", ctx, filters, limit, offset).Return(entities, 1, nil)
 
-	// Call the service
 	responses, total, err := suite.service.ListClients(ctx, filters, limit, offset)
 
-	// Assertions
 	suite.NoError(err)
 	suite.Equal(1, total)
 	suite.Len(responses, 1)
@@ -419,7 +394,6 @@ func (suite *ClientServiceTestSuite) TestListClientsWithSourceFilter() {
 	limit := 10
 	offset := 0
 
-	// Setup mock data with all required fields
 	name1 := "Jane Smith"
 	email1 := "jane@example.com"
 	stage1 := "registration"
@@ -446,13 +420,10 @@ func (suite *ClientServiceTestSuite) TestListClientsWithSourceFilter() {
 		},
 	}
 
-	// Setup expectations
 	suite.clientRepositoryMock.On("List", ctx, filters, limit, offset).Return(entities, 1, nil)
 
-	// Call the service
 	responses, total, err := suite.service.ListClients(ctx, filters, limit, offset)
 
-	// Assertions
 	suite.NoError(err)
 	suite.Equal(1, total)
 	suite.Len(responses, 1)
@@ -464,7 +435,6 @@ func (suite *ClientServiceTestSuite) TestListClientsWithPagination() {
 	filters := client.Filters{}
 	now := time.Now()
 
-	// Required fields for all entities
 	name := "Test User"
 	email := "test@example.com"
 	stage := "registration"
@@ -473,7 +443,6 @@ func (suite *ClientServiceTestSuite) TestListClientsWithPagination() {
 	channel := "direct"
 	app := "installed"
 
-	// First page
 	suite.Run("first page", func() {
 		limit := 2
 		offset := 0
@@ -514,13 +483,12 @@ func (suite *ClientServiceTestSuite) TestListClientsWithPagination() {
 		responses, total, err := suite.service.ListClients(ctx, filters, limit, offset)
 
 		suite.NoError(err)
-		suite.Equal(5, total)   // Total count is 5
-		suite.Len(responses, 2) // But only 2 returned
+		suite.Equal(5, total)
+		suite.Len(responses, 2)
 		suite.Equal("client1", responses[0].ID)
 		suite.Equal("client2", responses[1].ID)
 	})
 
-	// Second page
 	suite.Run("second page", func() {
 		limit := 2
 		offset := 2
@@ -567,7 +535,6 @@ func (suite *ClientServiceTestSuite) TestListClientsWithPagination() {
 		suite.Equal("client4", responses[1].ID)
 	})
 
-	// Last page
 	suite.Run("last page", func() {
 		limit := 2
 		offset := 4
@@ -600,7 +567,6 @@ func (suite *ClientServiceTestSuite) TestListClientsWithPagination() {
 	})
 }
 
-// Run the test suite
 func TestClientService(t *testing.T) {
 	suite.Run(t, new(ClientServiceTestSuite))
 }

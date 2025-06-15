@@ -1,6 +1,7 @@
 package http
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"strconv"
@@ -11,16 +12,19 @@ import (
 	"github.com/go-chi/render"
 
 	"TrackMe/internal/domain/client"
-	"TrackMe/internal/service/track"
 	"TrackMe/pkg/server/response"
 	"TrackMe/pkg/store"
 )
 
+type ClientTrackService interface {
+	ListClients(ctx context.Context, filters client.Filters, limit, offset int) ([]client.Response, int, error)
+	UpdateClient(ctx context.Context, id string, req client.Request) (client.Response, error)
+}
 type ClientHandler struct {
-	trackService *track.Service
+	trackService ClientTrackService
 }
 
-func NewClientHandler(s *track.Service) *ClientHandler {
+func NewClientHandler(s ClientTrackService) *ClientHandler {
 	return &ClientHandler{trackService: s}
 }
 

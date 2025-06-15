@@ -264,7 +264,8 @@ func (s *Service) calculateClientsPerStage(ctx context.Context, timestamp time.T
 }
 
 func (s *Service) calculateStageDuration(ctx context.Context, timestamp time.Time) error {
-	clients, _, err := s.clientRepository.List(ctx, client.Filters{IsActive: ptr(true)}, 0, 0)
+	isActive := true
+	clients, _, err := s.clientRepository.List(ctx, client.Filters{IsActive: &isActive}, 0, 0)
 	if err != nil {
 		return err
 	}
@@ -645,10 +646,10 @@ func (s *Service) calculateTotalDuration(ctx context.Context, timestamp time.Tim
 	}
 
 	lastStage := stages[len(stages)-1].ID
-
+	isActive := true
 	clients, _, err := s.clientRepository.List(ctx, client.Filters{
 		Stage:    lastStage,
-		IsActive: ptr(true),
+		IsActive: &isActive,
 	}, 0, 0)
 	if err != nil {
 		return err
@@ -1032,10 +1033,6 @@ func (s *Service) calculateAutoPaymentRate(ctx context.Context, timestamp time.T
 	s.PrometheusMetrics.AutoPaymentRate.Set(autopaymentRate)
 
 	return err
-}
-
-func ptr(b bool) *bool {
-	return &b
 }
 
 func (s *Service) createMetric(id string, metricType metric.Type, value float64, interval string, timestamp time.Time, metaData map[string]string) (metric.Entity, error) {

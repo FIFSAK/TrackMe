@@ -27,7 +27,7 @@ func (suite *MetricRepositorySuite) TearDownSuite() {
 }
 
 func (suite *MetricRepositorySuite) SetupTest() {
-	// Clean up before each test
+
 	_, err := suite.testDatabase.DbInstance.Collection("metrics").DeleteMany(
 		context.Background(), bson.M{})
 	suite.NoError(err)
@@ -35,7 +35,7 @@ func (suite *MetricRepositorySuite) SetupTest() {
 
 func (suite *MetricRepositorySuite) TestAdd() {
 	suite.Run("add new metric", func() {
-		// Create a test metric
+
 		id := primitive.NewObjectID().Hex()
 		now := time.Now()
 		metricType := metric.DAU
@@ -50,7 +50,6 @@ func (suite *MetricRepositorySuite) TestAdd() {
 			CreatedAt: &now,
 		}
 
-		// After Add
 		insertedID, err := suite.repository.Add(context.Background(), metricData)
 		suite.NoError(err)
 		suite.Equal(id, insertedID)
@@ -58,20 +57,17 @@ func (suite *MetricRepositorySuite) TestAdd() {
 		objID, err := primitive.ObjectIDFromHex(id)
 		suite.NoError(err)
 
-		// Debug: Count documents in collection
 		count, err := suite.testDatabase.DbInstance.Collection("metrics").CountDocuments(context.Background(), bson.M{})
 		suite.NoError(err)
 		suite.Equal(int64(1), count, "Should have exactly one document after insert")
 
-		// Verify it was added by checking the database directly
-		// Verify it was added by checking the database directly
 		var result bson.M
 		err = suite.testDatabase.DbInstance.Collection("metrics").FindOne(
 			context.Background(),
 			bson.M{"_id": objID}).Decode(&result)
 
 		if err != nil {
-			// Debug: Print all documents if the specific one isn't found
+
 			cursor, _ := suite.testDatabase.DbInstance.Collection("metrics").Find(context.Background(), bson.M{})
 			var all []bson.M
 			_ = cursor.All(context.Background(), &all)
@@ -107,7 +103,7 @@ func (suite *MetricRepositorySuite) TestAdd() {
 
 func (suite *MetricRepositorySuite) TestUpdate() {
 	suite.Run("update existing metric", func() {
-		// First add a metric
+
 		id := primitive.NewObjectID().Hex()
 		now := time.Now()
 		metricType := metric.MAU
@@ -125,7 +121,6 @@ func (suite *MetricRepositorySuite) TestUpdate() {
 		_, err := suite.repository.Add(context.Background(), originalMetric)
 		suite.NoError(err)
 
-		// Now update the metric
 		updatedValue := float64(300)
 		updatedMetric := metric.Entity{
 			Type:      &metricType,
@@ -144,7 +139,7 @@ func (suite *MetricRepositorySuite) TestUpdate() {
 	})
 
 	suite.Run("insert new metric if not exists", func() {
-		// Create a new metric via update (upsert)
+
 		id := primitive.NewObjectID().Hex()
 		now := time.Now()
 		metricType := metric.Conversion
@@ -186,7 +181,7 @@ func (suite *MetricRepositorySuite) TestUpdate() {
 }
 
 func (suite *MetricRepositorySuite) TestList() {
-	// Create test metrics
+
 	suite.createTestMetrics()
 
 	suite.Run("list all metrics", func() {
@@ -239,11 +234,9 @@ func (suite *MetricRepositorySuite) TestList() {
 	})
 }
 
-// Helper method to create test metrics
 func (suite *MetricRepositorySuite) createTestMetrics() {
 	now := time.Now()
 
-	// Metric 1: daily DAU
 	id1 := primitive.NewObjectID().Hex()
 	metricType1 := metric.DAU
 	value1 := float64(100)
@@ -257,7 +250,6 @@ func (suite *MetricRepositorySuite) createTestMetrics() {
 		CreatedAt: &now,
 	}
 
-	// Metric 2: weekly DAU
 	id2 := primitive.NewObjectID().Hex()
 	metricType2 := metric.DAU
 	value2 := float64(500)
@@ -271,7 +263,6 @@ func (suite *MetricRepositorySuite) createTestMetrics() {
 		CreatedAt: &now,
 	}
 
-	// Metric 3: daily Conversion
 	id3 := primitive.NewObjectID().Hex()
 	metricType3 := metric.Conversion
 	value3 := float64(25)

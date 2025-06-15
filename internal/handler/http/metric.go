@@ -2,20 +2,33 @@ package http
 
 import (
 	"TrackMe/internal/domain/metric"
-	"TrackMe/internal/service/track"
 	"TrackMe/pkg/server/response"
 	"TrackMe/pkg/store"
+	"context"
 	"errors"
 	"github.com/go-chi/chi/v5"
 	"net/http"
 )
 
-type MetricHandler struct {
-	trackService *track.Service
+// Define an interface that matches the methods used by MetricHandler
+type metricTrackService interface {
+	ListMetrics(ctx context.Context, filters metric.Filters) ([]metric.Response, error)
+	CalculateAllMetrics(ctx context.Context, interval string) error
 }
 
-func NewMetricHandler(s *track.Service) *MetricHandler {
+type MetricHandler struct {
+	trackService metricTrackService
+}
+
+func NewMetricHandler(s metricTrackService) *MetricHandler {
 	return &MetricHandler{trackService: s}
+}
+
+// For testing, use the mock directly
+func createTestMetricHandler(m metricTrackService) *MetricHandler {
+	return &MetricHandler{
+		trackService: m,
+	}
 }
 
 func (h *MetricHandler) Routes() chi.Router {
@@ -75,7 +88,7 @@ func (h *MetricHandler) triggerCalculateAllMetrics(w http.ResponseWriter, r *htt
 		response.InternalServerError(w, r, err)
 		return
 	}
-	response.OK(w, r, map[string]string{"message":"triggerred success"}, nil)
+	response.OK(w, r, map[string]string{"message": "triggerred success"}, nil)
 }
 
 //// @Summary Get metrics in Prometheus format

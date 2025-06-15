@@ -186,7 +186,7 @@ func (suite *RepositorySuite) TestUpdate() {
 	})
 
 	suite.Run("update existing client", func() {
-		// First create a client
+
 		name := "Original Name"
 		email := "original@example.com"
 		stage := "registration"
@@ -201,14 +201,13 @@ func (suite *RepositorySuite) TestUpdate() {
 		_, err := suite.repository.Update(context.Background(), id, originalClient)
 		suite.NoError(err)
 
-		// Now update the client
 		updatedName := "Updated Name"
 		updatedStage := "completed"
 		updatedSource := "referral"
 
 		updatedClient := client.Entity{
 			Name:         &updatedName,
-			Email:        &email, // keep same email
+			Email:        &email,
 			CurrentStage: &updatedStage,
 			Source:       &updatedSource,
 		}
@@ -235,12 +234,11 @@ func (suite *RepositorySuite) TestUpdate() {
 }
 
 func (suite *RepositorySuite) TestList() {
-	// First, clear any existing data
+
 	_, err := suite.testDatabase.DbInstance.Collection("clients").DeleteMany(
 		context.Background(), bson.M{})
 	suite.NoError(err)
 
-	// Create test clients
 	suite.createTestClients()
 
 	suite.Run("list all clients", func() {
@@ -294,10 +292,9 @@ func (suite *RepositorySuite) TestList() {
 			context.Background(), client.Filters{}, 2, 0)
 
 		suite.NoError(err)
-		suite.Equal(3, total)        // Total is still 3
-		suite.Equal(2, len(clients)) // But only 2 returned
+		suite.Equal(3, total)
+		suite.Equal(2, len(clients))
 
-		// Get next page
 		nextClients, nextTotal, err := suite.repository.List(
 			context.Background(), client.Filters{}, 2, 2)
 
@@ -308,12 +305,11 @@ func (suite *RepositorySuite) TestList() {
 }
 
 func (suite *RepositorySuite) TestCount() {
-	// First, clear any existing data
+
 	_, err := suite.testDatabase.DbInstance.Collection("clients").DeleteMany(
 		context.Background(), bson.M{})
 	suite.NoError(err)
 
-	// Create test clients
 	suite.createTestClients()
 
 	suite.Run("count all clients", func() {
@@ -333,9 +329,8 @@ func (suite *RepositorySuite) TestCount() {
 	})
 }
 
-// Helper method to create test data
 func (suite *RepositorySuite) createTestClients() {
-	// Client 1
+
 	name1 := "User One"
 	email1 := "user1@example.com"
 	stage1 := "registration"
@@ -350,7 +345,6 @@ func (suite *RepositorySuite) createTestClients() {
 		IsActive:     &isActive1,
 	}
 
-	// Client 2
 	name2 := "User Two"
 	email2 := "user2@example.com"
 	stage2 := "registration"
@@ -365,7 +359,6 @@ func (suite *RepositorySuite) createTestClients() {
 		IsActive:     &isActive2,
 	}
 
-	// Client 3
 	name3 := "User Three"
 	email3 := "user3@example.com"
 	stage3 := "completed"
@@ -393,8 +386,6 @@ func (suite *RepositorySuite) createTestClients() {
 	suite.NoError(err3)
 }
 
-// In order for 'go test' to run this suite, we need to create
-// a normal test function and pass our suite to suite.Run
 func TestClientRepositorySuite(t *testing.T) {
 	suite.Run(t, new(RepositorySuite))
 }

@@ -15,7 +15,7 @@ type StageRepositorySuite struct {
 }
 
 func (suite *StageRepositorySuite) SetupSuite() {
-	// Create a mock YAML file for testing
+
 	suite.mockYaml = `stages:
   - id: "stage1"
     name: "Registration"
@@ -41,7 +41,7 @@ func (suite *StageRepositorySuite) SetupSuite() {
 }
 
 func (suite *StageRepositorySuite) TearDownSuite() {
-	// Clean up the mock YAML file
+
 	os.Remove("stages.yaml")
 }
 
@@ -52,7 +52,6 @@ func (suite *StageRepositorySuite) TestList() {
 		suite.NoError(err)
 		suite.Equal(4, len(stages))
 
-		// Verify order
 		hasRegistration := false
 		hasOnboarding := false
 		hasActive := false
@@ -90,8 +89,8 @@ func (suite *StageRepositorySuite) TestGet() {
 		suite.Equal("stage2", stageEntity.ID)
 		suite.Equal("Onboarding", *stageEntity.Name)
 		suite.Equal(2, *stageEntity.Order)
-		suite.Contains(stageEntity.AllowedTransitions, "stage1") // Previous
-		suite.Contains(stageEntity.AllowedTransitions, "stage3") // Next
+		suite.Contains(stageEntity.AllowedTransitions, "stage1")
+		suite.Contains(stageEntity.AllowedTransitions, "stage3")
 	})
 
 	suite.Run("get non-existent stage", func() {
