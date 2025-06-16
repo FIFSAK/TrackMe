@@ -390,12 +390,11 @@ func (suite *RepositorySuite) createTestClients() {
 	suite.NoError(err3)
 }
 func (suite *RepositorySuite) TestListWithAllFilters() {
-	// Reset collection
+
 	_, err := suite.testDatabase.DbInstance.Collection("clients").DeleteMany(
 		context.Background(), bson.M{})
 	suite.NoError(err)
 
-	// Create test clients
 	suite.createClientsWithAdditionalFields()
 
 	suite.Run("list with channel filter", func() {
@@ -465,7 +464,6 @@ func (suite *RepositorySuite) TestPreservationOfRegistrationDate() {
 		isActive := true
 		regDate := time.Now().Add(-30 * 24 * time.Hour)
 
-		// Create client with registration date
 		client1 := client.Entity{
 			Name:             &name,
 			Email:            &email,
@@ -478,8 +476,7 @@ func (suite *RepositorySuite) TestPreservationOfRegistrationDate() {
 		_, err := suite.repository.Update(context.Background(), id, client1)
 		suite.NoError(err)
 
-		// Update client with different registration date
-		newRegDate := time.Now() // This should be ignored
+		newRegDate := time.Now()
 		client1.RegistrationDate = &newRegDate
 		updatedClient, err := suite.repository.Update(context.Background(), id, client1)
 
@@ -494,7 +491,6 @@ func (suite *RepositorySuite) TestDefaultLimitBehavior() {
 			context.Background(), bson.M{})
 		suite.NoError(err)
 
-		// Create 15 test clients
 		for i := 0; i < 15; i++ {
 			name := fmt.Sprintf("Limit Test %d", i)
 			email := fmt.Sprintf("limit%d@example.com", i)
@@ -509,25 +505,22 @@ func (suite *RepositorySuite) TestDefaultLimitBehavior() {
 			suite.NoError(err)
 		}
 
-		// Test with zero limit
 		clients, total, err := suite.repository.List(
 			context.Background(), client.Filters{}, 0, 0)
 		suite.NoError(err)
 		suite.Equal(15, total)
-		suite.Equal(10, len(clients)) // Default limit is 10
+		suite.Equal(10, len(clients))
 
-		// Test with negative limit
 		clients, total, err = suite.repository.List(
 			context.Background(), client.Filters{}, -5, 0)
 		suite.NoError(err)
 		suite.Equal(15, total)
-		suite.Equal(10, len(clients)) // Default limit is 10
+		suite.Equal(10, len(clients))
 	})
 }
 
-// Helper method to create clients with all fields for testing filters
 func (suite *RepositorySuite) createClientsWithAdditionalFields() {
-	// Client 1 with email channel and app installed
+
 	name1 := "Filter Test 1"
 	email1 := "filter1@example.com"
 	stage1 := "registration"
@@ -547,7 +540,6 @@ func (suite *RepositorySuite) createClientsWithAdditionalFields() {
 		LastLogin:    &lastLogin1,
 	}
 
-	// Client 2 with sms channel and app not installed
 	name2 := "Filter Test 2"
 	email2 := "filter2@example.com"
 	stage2 := "active"
@@ -567,7 +559,6 @@ func (suite *RepositorySuite) createClientsWithAdditionalFields() {
 		LastLogin:    &lastLogin2,
 	}
 
-	// Client 3 with email channel and no last login
 	name3 := "Filter Test 3"
 	email3 := "filter3@example.com"
 	stage3 := "completed"

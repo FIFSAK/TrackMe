@@ -313,7 +313,6 @@ func (suite *ClientServiceTestSuite) TestUpdateClientRollback() {
 	prevStage := "registration"
 	suite.stageRepositoryMock.On("UpdateStage", ctx, currentStage, req.Stage).Return(prevStage, nil)
 
-	// Add this missing mock expectation for the cache
 	suite.metricCacheMock.On("List", ctx, metric.Filters{
 		Type:     "rollback-count",
 		Interval: "day",
@@ -581,7 +580,7 @@ func (suite *ClientServiceTestSuite) TestListClientsWithPagination() {
 }
 
 func TestServiceConfiguration(t *testing.T) {
-	// Create mock dependencies using existing mocks from client_test.go
+
 	clientRepo := new(MockClientRepository)
 	stageRepo := new(MockStageRepository)
 	metricRepo := new(MockMetricRepository)
@@ -659,7 +658,6 @@ func (suite *ClientServiceTestSuite) TestUpdateClientWithStageUpdateError() {
 	clientID := "client123"
 	currentStage := "registration"
 
-	// Setup existing client
 	name := "Test Client"
 	email := "test@example.com"
 	isActive := true
@@ -671,22 +669,17 @@ func (suite *ClientServiceTestSuite) TestUpdateClientWithStageUpdateError() {
 		IsActive:     &isActive,
 	}
 
-	// Setup request
 	req := client.Request{
 		Stage: "next",
 	}
 
-	// Mock get client
 	suite.clientRepositoryMock.On("Get", ctx, clientID).Return(existingClient, nil)
 
-	// Mock stage update to return error
 	stageError := errors.New("invalid stage transition")
 	suite.stageRepositoryMock.On("UpdateStage", ctx, currentStage, req.Stage).Return("", stageError)
 
-	// Test
 	_, err := suite.service.UpdateClient(ctx, clientID, req)
 
-	// Verify
 	suite.Error(err)
 	suite.Contains(err.Error(), "invalid stage transition")
 	suite.clientRepositoryMock.AssertExpectations(suite.T())
@@ -697,19 +690,15 @@ func (suite *ClientServiceTestSuite) TestUpdateClientWithGetClientError() {
 	ctx := context.Background()
 	clientID := "client123"
 
-	// Setup request
 	req := client.Request{
 		Stage: "next",
 	}
 
-	// Mock get client to return error
 	getError := errors.New("database error")
 	suite.clientRepositoryMock.On("Get", ctx, clientID).Return(client.Entity{}, getError)
 
-	// Test
 	_, err := suite.service.UpdateClient(ctx, clientID, req)
 
-	// Verify
 	suite.Error(err)
 	suite.Equal(getError, err)
 	suite.clientRepositoryMock.AssertExpectations(suite.T())
@@ -719,22 +708,17 @@ func (suite *ClientServiceTestSuite) TestListClientsWithNonExistentID() {
 	ctx := context.Background()
 	nonExistentID := "non-existent-id"
 
-	// Create filter with non-existent ID
 	filters := client.Filters{
 		ID: nonExistentID,
 	}
 	limit := 10
 	offset := 0
 
-	// Mock repository to return not found error when ID doesn't exist
-	// Note: This assumes we want to change the behavior to return an error rather than empty slice
 	suite.clientRepositoryMock.On("List", ctx, filters, limit, offset).Return(
 		[]client.Entity{}, 0, store.ErrorNotFound)
 
-	// Call the service method
 	responses, total, err := suite.service.ListClients(ctx, filters, limit, offset)
 
-	// Verify expectations
 	suite.Error(err)
 	suite.Equal(store.ErrorNotFound, err)
 	suite.Equal(0, total)
@@ -747,7 +731,6 @@ func (suite *ClientServiceTestSuite) TestUpdateClientWithEmptyName() {
 	clientID := "client123"
 	currentStage := "registration"
 
-	// Setup existing client
 	name := "Test Client"
 	email := "test@example.com"
 	isActive := true
@@ -771,7 +754,6 @@ func (suite *ClientServiceTestSuite) TestUpdateClientWithEmptyName() {
 		Contracts:        []contract.Entity{},
 	}
 
-	// Setup request with empty name
 	req := client.Request{
 		Stage:    "next",
 		Name:     "",
@@ -781,13 +763,10 @@ func (suite *ClientServiceTestSuite) TestUpdateClientWithEmptyName() {
 		Channel:  "direct",
 	}
 
-	// Mock get client
 	suite.clientRepositoryMock.On("Get", ctx, clientID).Return(existingClient, nil)
 
-	// Mock stage update
 	suite.stageRepositoryMock.On("UpdateStage", ctx, currentStage, req.Stage).Return("active", nil)
 
-	// Mock update client - should set default name
 	suite.clientRepositoryMock.On(
 		"Update",
 		ctx,
@@ -809,10 +788,8 @@ func (suite *ClientServiceTestSuite) TestUpdateClientWithEmptyName() {
 		LastLogin:        &now,
 	}, nil)
 
-	// Test
 	response, err := suite.service.UpdateClient(ctx, clientID, req)
 
-	// Verify
 	suite.NoError(err)
 	suite.Equal("Guest_"+clientID, response.Name)
 }
@@ -822,7 +799,6 @@ func (suite *ClientServiceTestSuite) TestUpdateClientWithUpdateError() {
 	clientID := "client123"
 	currentStage := "registration"
 
-	// Setup existing client
 	name := "Test Client"
 	email := "test@example.com"
 	existingClient := client.Entity{
@@ -832,19 +808,15 @@ func (suite *ClientServiceTestSuite) TestUpdateClientWithUpdateError() {
 		CurrentStage: &currentStage,
 	}
 
-	// Setup request
 	req := client.Request{
 		Stage: "next",
 		Name:  "Updated Name",
 	}
 
-	// Mock get client
 	suite.clientRepositoryMock.On("Get", ctx, clientID).Return(existingClient, nil)
 
-	// Mock stage update
 	suite.stageRepositoryMock.On("UpdateStage", ctx, currentStage, req.Stage).Return("active", nil)
 
-	// Mock update client to return error
 	updateError := errors.New("database error")
 	suite.clientRepositoryMock.On(
 		"Update",
@@ -853,15 +825,12 @@ func (suite *ClientServiceTestSuite) TestUpdateClientWithUpdateError() {
 		mock.Anything,
 	).Return(client.Entity{}, updateError)
 
-	// Test
 	_, err := suite.service.UpdateClient(ctx, clientID, req)
 
-	// Verify
 	suite.Error(err)
 	suite.Equal(updateError, err)
 }
 
-// Helper functions
 func stringPtr(s string) *string {
 	return &s
 }

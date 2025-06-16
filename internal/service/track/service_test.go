@@ -31,7 +31,7 @@ func (suite *ServiceTestSuite) TestNewServiceNilConfigs() {
 }
 
 func (suite *ServiceTestSuite) TestServiceWithMultipleConfigurations() {
-	// Test that configurations are applied in order
+
 	configCalls := []string{}
 
 	config1 := func(s *Service) error {
@@ -52,7 +52,7 @@ func (suite *ServiceTestSuite) TestServiceWithMultipleConfigurations() {
 }
 
 func (suite *ServiceTestSuite) TestServiceWithEarlyConfigError() {
-	// Test that if a configuration returns an error, later configurations aren't called
+
 	configCalls := []string{}
 
 	config1 := func(s *Service) error {
@@ -74,7 +74,7 @@ func (suite *ServiceTestSuite) TestServiceWithEarlyConfigError() {
 }
 
 func (suite *ServiceTestSuite) TestServiceComponentAccess() {
-	// Test that all components can be accessed after configuration
+
 	service, err := New(
 		WithClientRepository(suite.clientRepositoryMock),
 		WithStageRepository(suite.stageRepositoryMock),
@@ -85,7 +85,6 @@ func (suite *ServiceTestSuite) TestServiceComponentAccess() {
 
 	suite.NoError(err)
 
-	// Access each component to ensure they're correctly set
 	suite.Equal(suite.clientRepositoryMock, service.clientRepository)
 	suite.Equal(suite.stageRepositoryMock, service.StageRepository)
 	suite.Equal(suite.metricRepositoryMock, service.MetricRepository)
