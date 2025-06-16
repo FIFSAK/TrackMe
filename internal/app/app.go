@@ -122,31 +122,3 @@ func Run() {
 
 	fmt.Println("server was successful shutdown.")
 }
-
-//// runMigrations applies MongoDB migrations from the migrations directory
-//func runMigrations(dsn string) error {
-//	migrationPath := "file://migrations/mongo"
-//	m, err := migrate.New(migrationPath, dsn)
-//	if err != nil {
-//		return fmt.Errorf("failed to create migration instance: %w", err)
-//	}
-//
-//	// Check for dirty database state
-//	version, dirty, err := m.Version()
-//	if err != nil && !errors.Is(err, migrate.ErrNilVersion) {
-//		return fmt.Errorf("failed to get migration version: %w", err)
-//	}
-//
-//	// Force the version if the database is in a dirty state
-//	if dirty {
-//		if err = m.Force(int(version)); err != nil {
-//			return fmt.Errorf("failed to force migration version: %w", err)
-//		}
-//	}
-//
-//	if err = m.Up(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
-//		return fmt.Errorf("failed to apply migrations: %w", err)
-//	}
-//
-//	return nil
-//}
