@@ -29,7 +29,7 @@ type MetricServiceTestSuite struct {
 	metricCacheMock      *MockMetricCache
 	clientRepositoryMock *MockClientRepository
 	stageRepositoryMock  *MockStageRepository
-	PrometheusMetrics    prometheus.Entity
+	prometheusMetrics    prometheus.Entity
 }
 
 type MockMetricCache struct {
@@ -67,7 +67,6 @@ func (m *MockMetricCache) InvalidateListCache(ctx context.Context, filters metri
 }
 
 func (suite *MetricServiceTestSuite) SetupSuite() {
-	suite.PrometheusMetrics = NewForTesting()
 }
 
 func (suite *MetricServiceTestSuite) SetupTest() {
@@ -75,12 +74,13 @@ func (suite *MetricServiceTestSuite) SetupTest() {
 	suite.metricCacheMock = new(MockMetricCache)
 	suite.clientRepositoryMock = new(MockClientRepository)
 	suite.stageRepositoryMock = new(MockStageRepository)
+	suite.prometheusMetrics = NewForTesting()
 
 	suite.service = &Service{
 		MetricRepository:  suite.metricRepositoryMock,
 		clientRepository:  suite.clientRepositoryMock,
 		StageRepository:   suite.stageRepositoryMock,
-		PrometheusMetrics: suite.PrometheusMetrics,
+		PrometheusMetrics: suite.prometheusMetrics,
 	}
 }
 
@@ -1206,6 +1206,351 @@ func (suite *MetricServiceTestSuite) TestCalculateRollbackCountWithCacheInvalida
 
 	suite.NoError(err)
 	cacheMock.AssertExpectations(suite.T())
+}
+
+func (suite *MetricServiceTestSuite) TestCalculateRollbackCountComprehensive() {
+	ctx := context.Background()
+	now := time.Now()
+
+	suite.Run("No existing metric for today", func() {
+		// Reset mocks
+		metricRepoMock := new(MockMetricRepository)
+		suite.service.MetricRepository = metricRepoMock
+
+		// Setup mock to return no metrics
+		metricRepoMock.On("List", ctx, metric.Filters{
+			Type:     string(metric.RollbackCount),
+			Interval: "day",
+		}).Return([]metric.Entity{}, nil)
+
+		// Expect adding a new metric with value 1.0
+		metricRepoMock.On("Add", ctx, mock.MatchedBy(func(m metric.Entity) bool {
+			return *m.Type == metric.RollbackCount && *m.Value == 1.0 && *m.Interval == "day"
+		})).Return("new-rollback-id", nil)
+
+		// Set up cache mock
+		cacheMock := new(MockMetricCache)
+		suite.service.MetricCache = cacheMock
+		cacheMock.On("List", ctx, mock.Anything).Return([]metric.Entity{}, errors.New("cache miss"))
+		cacheMock.On("InvalidateListCache", ctx, mock.Anything).Return(nil)
+
+		err := suite.service.calculateRollbackCount(ctx, now)
+
+		suite.NoError(err)
+		metricRepoMock.AssertCalled(suite.T(), "Add", ctx, mock.MatchedBy(func(m metric.Entity) bool {
+			return *m.Type == metric.RollbackCount && *m.Value == 1.0
+		}))
+		cacheMock.AssertExpectations(suite.T())
+	})
+
+	suite.Run("Existing metric for today", func() {
+		// Reset mocks
+		metricRepoMock := new(MockMetricRepository)
+		suite.service.MetricRepository = metricRepoMock
+
+		// Create existing metric for today
+		metricType := metric.RollbackCount
+		existingValue := float64(5)
+		interval := "day"
+		today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+
+		existingMetric := metric.Entity{
+			ID:        "existing-rollback-id",
+			Type:      &metricType,
+			Value:     &existingValue,
+			Interval:  &interval,
+			CreatedAt: &today,
+			Metadata:  make(map[string]string),
+		}
+
+		// Setup mock to return existing metric
+		metricRepoMock.On("List", ctx, metric.Filters{
+			Type:     string(metric.RollbackCount),
+			Interval: "day",
+		}).Return([]metric.Entity{existingMetric}, nil)
+
+		// Expect update with incremented value
+		expectedNewValue := existingValue + 1
+		metricRepoMock.On("Update", ctx, "existing-rollback-id", mock.MatchedBy(func(m metric.Entity) bool {
+			return *m.Type == metric.RollbackCount && *m.Value == expectedNewValue
+		})).Return(metric.Entity{}, nil)
+
+		// Set up cache mock
+		cacheMock := new(MockMetricCache)
+		suite.service.MetricCache = cacheMock
+		cacheMock.On("List", ctx, mock.Anything).Return([]metric.Entity{existingMetric}, nil)
+		cacheMock.On("InvalidateListCache", ctx, mock.Anything).Return(nil)
+
+		err := suite.service.calculateRollbackCount(ctx, now)
+
+		suite.NoError(err)
+		metricRepoMock.AssertCalled(suite.T(), "Update", ctx, "existing-rollback-id", mock.MatchedBy(func(m metric.Entity) bool {
+			return *m.Type == metric.RollbackCount && *m.Value == expectedNewValue
+		}))
+	})
+
+	suite.Run("Repository error when listing metrics", func() {
+		// Reset mocks
+		metricRepoMock := new(MockMetricRepository)
+		suite.service.MetricRepository = metricRepoMock
+
+		// Setup mock to return error
+		repoError := errors.New("database connection error")
+		metricRepoMock.On("List", ctx, mock.Anything).Return([]metric.Entity{}, repoError)
+
+		// Cache miss
+		cacheMock := new(MockMetricCache)
+		suite.service.MetricCache = cacheMock
+		cacheMock.On("List", ctx, mock.Anything).Return([]metric.Entity{}, errors.New("cache miss"))
+
+		err := suite.service.calculateRollbackCount(ctx, now)
+
+		suite.Error(err)
+		suite.Contains(err.Error(), "database connection error")
+		metricRepoMock.AssertNotCalled(suite.T(), "Add")
+		metricRepoMock.AssertNotCalled(suite.T(), "Update")
+	})
+
+	suite.Run("Repository error when updating metric", func() {
+		// Reset mocks
+		metricRepoMock := new(MockMetricRepository)
+		suite.service.MetricRepository = metricRepoMock
+
+		// Create existing metric for today
+		metricType := metric.RollbackCount
+		existingValue := float64(5)
+		interval := "day"
+		today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+
+		existingMetric := metric.Entity{
+			ID:        "existing-rollback-id",
+			Type:      &metricType,
+			Value:     &existingValue,
+			Interval:  &interval,
+			CreatedAt: &today,
+			Metadata:  make(map[string]string),
+		}
+
+		// Setup mock to return existing metric
+		metricRepoMock.On("List", ctx, metric.Filters{
+			Type:     string(metric.RollbackCount),
+			Interval: "day",
+		}).Return([]metric.Entity{existingMetric}, nil)
+
+		// Setup update to fail
+		updateError := errors.New("update failed")
+		metricRepoMock.On("Update", ctx, "existing-rollback-id", mock.Anything).Return(metric.Entity{}, updateError)
+
+		cacheMock := new(MockMetricCache)
+		suite.service.MetricCache = cacheMock
+		cacheMock.On("List", ctx, mock.Anything).Return([]metric.Entity{existingMetric}, nil)
+
+		err := suite.service.calculateRollbackCount(ctx, now)
+
+		suite.Error(err)
+		suite.Contains(err.Error(), "update failed")
+	})
+
+	suite.Run("Repository error when adding new metric", func() {
+		// Reset mocks
+		metricRepoMock := new(MockMetricRepository)
+		suite.service.MetricRepository = metricRepoMock
+
+		// No existing metrics
+		metricRepoMock.On("List", ctx, mock.Anything).Return([]metric.Entity{}, nil)
+
+		// Add operation fails
+		addError := errors.New("add failed")
+		metricRepoMock.On("Add", ctx, mock.Anything).Return("", addError)
+
+		cacheMock := new(MockMetricCache)
+		suite.service.MetricCache = cacheMock
+		cacheMock.On("List", ctx, mock.Anything).Return([]metric.Entity{}, errors.New("cache miss"))
+
+		err := suite.service.calculateRollbackCount(ctx, now)
+
+		suite.Error(err)
+		suite.Contains(err.Error(), "add failed")
+	})
+}
+
+func (suite *MetricServiceTestSuite) TestCalculateStatusUpdatesComprehensive() {
+	ctx := context.Background()
+	now := time.Now()
+
+	suite.Run("Daily interval with successful count", func() {
+		// Reset mocks
+		clientRepoMock := new(MockClientRepository)
+		suite.service.clientRepository = clientRepoMock
+		metricRepoMock := new(MockMetricRepository)
+		suite.service.MetricRepository = metricRepoMock
+
+		// Setup mock to return client count
+		clientCount := int64(42)
+		clientRepoMock.On("Count", ctx, mock.MatchedBy(func(filter bson.M) bool {
+			// Verify filter contains expected date range for daily interval
+			updateFilter, ok := filter["last_updated"].(bson.M)
+			if !ok {
+				return false
+			}
+			return updateFilter["$gte"] != nil && updateFilter["$lte"] != nil
+		})).Return(clientCount, nil)
+
+		// Expect metric storage
+		metricRepoMock.On("Add", ctx, mock.MatchedBy(func(m metric.Entity) bool {
+			return *m.Type == metric.StatusUpdates &&
+				*m.Value == float64(clientCount) &&
+				*m.Interval == "day"
+		})).Return("metric-id", nil)
+
+		err := suite.service.calculateStatusUpdates(ctx, now, "day")
+
+		suite.NoError(err)
+		clientRepoMock.AssertExpectations(suite.T())
+		metricRepoMock.AssertExpectations(suite.T())
+	})
+
+	suite.Run("Weekly interval with successful count", func() {
+		// Reset mocks
+		clientRepoMock := new(MockClientRepository)
+		suite.service.clientRepository = clientRepoMock
+		metricRepoMock := new(MockMetricRepository)
+		suite.service.MetricRepository = metricRepoMock
+
+		clientCount := int64(75)
+		clientRepoMock.On("Count", ctx, mock.MatchedBy(func(filter bson.M) bool {
+			// Verify filter contains date range for weekly interval
+			updateFilter, ok := filter["last_updated"].(bson.M)
+			if !ok {
+				return false
+			}
+			return updateFilter["$gte"] != nil && updateFilter["$lte"] != nil
+		})).Return(clientCount, nil)
+
+		metricRepoMock.On("Add", ctx, mock.MatchedBy(func(m metric.Entity) bool {
+			return *m.Type == metric.StatusUpdates &&
+				*m.Value == float64(clientCount) &&
+				*m.Interval == "week"
+		})).Return("metric-id", nil)
+
+		err := suite.service.calculateStatusUpdates(ctx, now, "week")
+
+		suite.NoError(err)
+		clientRepoMock.AssertExpectations(suite.T())
+		metricRepoMock.AssertExpectations(suite.T())
+	})
+
+	suite.Run("Monthly interval with successful count", func() {
+		// Reset mocks
+		clientRepoMock := new(MockClientRepository)
+		suite.service.clientRepository = clientRepoMock
+		metricRepoMock := new(MockMetricRepository)
+		suite.service.MetricRepository = metricRepoMock
+
+		clientCount := int64(150)
+		clientRepoMock.On("Count", ctx, mock.MatchedBy(func(filter bson.M) bool {
+			// Verify filter contains date range for monthly interval
+			updateFilter, ok := filter["last_updated"].(bson.M)
+			if !ok {
+				return false
+			}
+			return updateFilter["$gte"] != nil && updateFilter["$lte"] != nil
+		})).Return(clientCount, nil)
+
+		metricRepoMock.On("Add", ctx, mock.MatchedBy(func(m metric.Entity) bool {
+			return *m.Type == metric.StatusUpdates &&
+				*m.Value == float64(clientCount) &&
+				*m.Interval == "month"
+		})).Return("metric-id", nil)
+
+		err := suite.service.calculateStatusUpdates(ctx, now, "month")
+
+		suite.NoError(err)
+		clientRepoMock.AssertExpectations(suite.T())
+		metricRepoMock.AssertExpectations(suite.T())
+	})
+
+	suite.Run("Invalid interval", func() {
+		// Reset mocks
+		clientRepoMock := new(MockClientRepository)
+		suite.service.clientRepository = clientRepoMock
+		metricRepoMock := new(MockMetricRepository)
+		suite.service.MetricRepository = metricRepoMock
+
+		// Try with invalid interval
+		invalidInterval := "quarter"
+		err := suite.service.calculateStatusUpdates(ctx, now, invalidInterval)
+
+		suite.Error(err)
+		suite.Contains(err.Error(), "invalid interval")
+		clientRepoMock.AssertNotCalled(suite.T(), "Count")
+		metricRepoMock.AssertNotCalled(suite.T(), "Add")
+	})
+
+	suite.Run("Error when counting clients", func() {
+		// Reset mocks
+		clientRepoMock := new(MockClientRepository)
+		suite.service.clientRepository = clientRepoMock
+		metricRepoMock := new(MockMetricRepository)
+		suite.service.MetricRepository = metricRepoMock
+
+		// Setup repository to return error on count
+		countError := errors.New("database connection error")
+		clientRepoMock.On("Count", ctx, mock.Anything).Return(int64(0), countError)
+
+		err := suite.service.calculateStatusUpdates(ctx, now, "day")
+
+		suite.Error(err)
+		suite.Contains(err.Error(), "failed to count status updates")
+		suite.Contains(err.Error(), "database connection error")
+		metricRepoMock.AssertNotCalled(suite.T(), "Add")
+	})
+
+	suite.Run("Error when storing metric", func() {
+		// Reset mocks
+		clientRepoMock := new(MockClientRepository)
+		suite.service.clientRepository = clientRepoMock
+		metricRepoMock := new(MockMetricRepository)
+		suite.service.MetricRepository = metricRepoMock
+
+		// Setup successful count
+		clientCount := int64(10)
+		clientRepoMock.On("Count", ctx, mock.Anything).Return(clientCount, nil)
+
+		// Setup error on metric storage
+		storeError := errors.New("metric storage failed")
+		metricRepoMock.On("Add", ctx, mock.Anything).Return("", storeError)
+
+		err := suite.service.calculateStatusUpdates(ctx, now, "day")
+
+		suite.Error(err)
+		suite.Contains(err.Error(), "failed to store status updates metric")
+		clientRepoMock.AssertExpectations(suite.T())
+	})
+
+	suite.Run("Zero clients found", func() {
+		// Reset mocks
+		clientRepoMock := new(MockClientRepository)
+		suite.service.clientRepository = clientRepoMock
+		metricRepoMock := new(MockMetricRepository)
+		suite.service.MetricRepository = metricRepoMock
+
+		// Setup count to return zero
+		clientRepoMock.On("Count", ctx, mock.Anything).Return(int64(0), nil)
+
+		// Should still create metric with zero value
+		metricRepoMock.On("Add", ctx, mock.MatchedBy(func(m metric.Entity) bool {
+			return *m.Type == metric.StatusUpdates &&
+				*m.Value == 0.0 &&
+				*m.Interval == "day"
+		})).Return("metric-id", nil)
+
+		err := suite.service.calculateStatusUpdates(ctx, now, "day")
+
+		suite.NoError(err)
+		clientRepoMock.AssertExpectations(suite.T())
+		metricRepoMock.AssertExpectations(suite.T())
+	})
 }
 
 func TestMetricService(t *testing.T) {
