@@ -104,7 +104,7 @@ jobs:
           host: ${{ secrets.HOST }}
           username: ${{ secrets.USERNAME }}
           key: ${{ secrets.SSH_KEY }}
-          source: "docker-compose.yml,.env"
+          source: "docker-compose.yml,.env,prometheus.yml"
           target: "/trackme"
 
       - name: Deploy to production
