@@ -101,6 +101,12 @@ jobs:
           username: ${{ secrets.USERNAME }}
           key: ${{ secrets.SSH_KEY }}
           script: |
+            # Install Docker Compose V2 if not available
+            if ! command -v docker-compose &> /dev/null && ! docker compose version &> /dev/null; then
+              sudo curl -L "https://github.com/docker/compose/releases/download/v2.23.3/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+              sudo chmod +x /usr/local/bin/docker-compose
+            fi
+            
             mkdir -p /trackme
             cd /trackme
             docker-compose pull
