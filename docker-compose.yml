@@ -1,24 +1,24 @@
 version: '3.4'
 
 services:
-#  app:
-#    image: trackme-app
-#    container_name: trackme-service-app
-#    build:
-#      context: .
-#      dockerfile: Dockerfile
-#    ports:
-#      - "80:80"
-#    depends_on:
-#      - mongo
-#      - redis
-#    env_file:
-#      - .env
-#    environment:
-#      - MONGO_DSN=mongodb://${MONGO_USERNAME}:${MONGO_PASSWORD}@mongo:27017/${MONGO_DATABASE}?authSource=admin
-#      - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379/0
-#    networks:
-#      - trackme-network
+  app:
+    image: ${DOCKER_USERNAME}/trackme-app:latest
+    container_name: trackme-service-app
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"
+    depends_on:
+      - mongo
+      - redis
+    env_file:
+      - .env
+    environment:
+      - MONGO_DSN=mongodb://${MONGO_USERNAME}:${MONGO_PASSWORD}@mongo:27017/${MONGO_DATABASE}?authSource=admin
+      - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379/0
+    networks:
+      - trackme-network
 
   mongo:
     image: mongo:latest
