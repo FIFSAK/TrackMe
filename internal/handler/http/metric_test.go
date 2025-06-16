@@ -283,15 +283,3 @@ func TestMetricHandler_TriggerCalculateAllMetrics(t *testing.T) {
 		require.Equal(t, http.StatusInternalServerError, w.Code)
 	})
 }
-
-type metricServiceAdapter struct {
-	mockService *MockMetricService
-}
-
-func (m *metricServiceAdapter) ListMetrics(ctx context.Context, filters metric.Filters) ([]metric.Response, error) {
-	return m.mockService.ListMetrics(ctx, filters)
-}
-
-func (m *metricServiceAdapter) CalculateAllMetrics(ctx context.Context, interval string) error {
-	return m.mockService.CalculateAllMetrics(ctx, interval)
-}

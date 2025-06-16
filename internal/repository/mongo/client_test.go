@@ -23,7 +23,8 @@ type TestDatabase struct {
 }
 
 func SetupTestDatabaseWithName(name string) *TestDatabase {
-	ctx, _ := context.WithTimeout(context.Background(), time.Second*60)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*60)
+	defer cancel()
 	container, dbInstance, dbAddr, err := createMongoContainer(ctx, name)
 	if err != nil {
 		log.Fatal("failed to setup test", err)
@@ -43,12 +44,12 @@ func (tdb *TestDatabase) TearDown() {
 func NewMongoDatabase(uri string, database string) (*mongo.Database, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	client, err := mongo.Connect(ctx, options.Client().ApplyURI(uri))
+	mongoClient, err := mongo.Connect(ctx, options.Client().ApplyURI(uri))
 	if err != nil {
 		return nil, err
 	}
 
-	db := client.Database(database)
+	db := mongoClient.Database(database)
 
 	return db, nil
 }
@@ -110,7 +111,10 @@ func (suite *RepositorySuite) SetupSuite() {
 }
 
 func (suite *RepositorySuite) TearDownSuite() {
-	suite.testDatabase.container.Terminate(context.Background())
+	err := suite.testDatabase.container.Terminate(context.Background())
+	if err != nil {
+		return
+	}
 }
 
 func (suite *RepositorySuite) TestGet() {

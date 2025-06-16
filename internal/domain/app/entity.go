@@ -7,7 +7,5 @@ type Entity struct {
 
 // New creates a new app instance.
 func New(req Request) Entity {
-	return Entity{
-		Status: req.Status,
-	}
+	return Entity(req)
 }

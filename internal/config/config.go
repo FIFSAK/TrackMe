@@ -52,6 +52,9 @@ func New() (cfg Configs, err error) {
 		return Configs{}, err
 	}
 	appTimeout, err := strconv.Atoi(os.Getenv("APP_TIMEOUT"))
+	if err != nil {
+		return Configs{}, err
+	}
 
 	cfg.APP = AppConfig{
 		Mode:    os.Getenv("APP_MODE"),

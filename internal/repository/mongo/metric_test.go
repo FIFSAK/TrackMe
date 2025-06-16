@@ -23,7 +23,10 @@ func (suite *MetricRepositorySuite) SetupSuite() {
 }
 
 func (suite *MetricRepositorySuite) TearDownSuite() {
-	suite.testDatabase.container.Terminate(context.Background())
+	err := suite.testDatabase.container.Terminate(context.Background())
+	if err != nil {
+		return
+	}
 }
 
 func (suite *MetricRepositorySuite) SetupTest() {

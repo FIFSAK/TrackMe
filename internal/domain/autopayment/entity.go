@@ -7,7 +7,5 @@ type Entity struct {
 
 // New creates a new auto payment instance.
 func New(req Request) Entity {
-	return Entity{
-		Status: req.Status,
-	}
+	return Entity(req)
 }

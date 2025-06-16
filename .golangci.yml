@@ -9,9 +9,7 @@ linters:
     - staticcheck
     - gosimple
     - unused
-    - deadcode
-    - structcheck
-    - varcheck
+    # Removed: deadcode, structcheck, varcheck (all replaced by unused)
 
 issues:
   exclude-use-default: false

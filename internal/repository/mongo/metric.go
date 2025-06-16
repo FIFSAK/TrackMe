@@ -2,6 +2,7 @@ package mongo
 
 import (
 	"TrackMe/internal/domain/metric"
+	"TrackMe/pkg/log"
 	"context"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -38,7 +39,13 @@ func (r *MetricRepository) List(ctx context.Context, filters metric.Filters) ([]
 	if err != nil {
 		return nil, err
 	}
-	defer cur.Close(ctx)
+	defer func(cur *mongo.Cursor, ctx context.Context) {
+		err = cur.Close(ctx)
+		if err != nil {
+			logger := log.LoggerFromContext(ctx)
+			logger.Error().Err(err).Msg("failed to close cursor")
+		}
+	}(cur, ctx)
 
 	var metrics []metric.Entity
 	if err = cur.All(ctx, &metrics); err != nil {

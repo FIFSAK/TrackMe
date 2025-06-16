@@ -42,7 +42,10 @@ func (suite *StageRepositorySuite) SetupSuite() {
 
 func (suite *StageRepositorySuite) TearDownSuite() {
 
-	os.Remove("stages.yaml")
+	err := os.Remove("stages.yaml")
+	if err != nil {
+		return
+	}
 }
 
 func (suite *StageRepositorySuite) TestList() {

@@ -43,7 +43,10 @@ func New(d Dependencies, configs ...Configuration) (s *Cache, err error) {
 // Close then waits for all queries that have started processing on the server to finish.
 func (r *Cache) Close() {
 	if r.redis.Connection != nil {
-		r.redis.Connection.Close()
+		err := r.redis.Connection.Close()
+		if err != nil {
+			return
+		}
 	}
 }
 

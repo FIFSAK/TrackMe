@@ -2,6 +2,7 @@ package mongo
 
 import (
 	"TrackMe/internal/domain/client"
+	"TrackMe/pkg/log"
 	"TrackMe/pkg/store"
 	"context"
 	"errors"
@@ -61,6 +62,10 @@ func (r *ClientRepository) List(ctx context.Context, filters client.Filters, lim
 		filter["last_login"] = bson.M{"$gte": filters.LastLoginAfter}
 	}
 
+	if limit <= 0 {
+		limit = 10
+	}
+
 	opts := options.Find().
 		SetLimit(int64(limit)).
 		SetSkip(int64(offset)).
@@ -70,15 +75,18 @@ func (r *ClientRepository) List(ctx context.Context, filters client.Filters, lim
 	if err != nil {
 		return nil, 0, err
 	}
-	if limit <= 0 {
-		limit = 10
-	}
 
 	cur, err := r.db.Find(ctx, filter, opts)
 	if err != nil {
 		return nil, 0, err
 	}
-	defer cur.Close(ctx)
+	defer func(cur *mongo.Cursor, ctx context.Context) {
+		err = cur.Close(ctx)
+		if err != nil {
+			logger := log.LoggerFromContext(ctx)
+			logger.Error().Err(err).Msg("failed to close cursor")
+		}
+	}(cur, ctx)
 
 	var clients []client.Entity
 	if err = cur.All(ctx, &clients); err != nil {

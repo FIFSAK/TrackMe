@@ -18,19 +18,15 @@ type Mongo struct {
 }
 
 func NewMongo(uri string) (store Mongo, err error) {
-	store.Client, err = mongo.NewClient(options.Client().ApplyURI(uri))
+	ctxWithTimeout, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	store.Client, err = mongo.Connect(ctxWithTimeout, options.Client().ApplyURI(uri))
 	if err != nil {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
-
-	if err = store.Client.Connect(ctx); err != nil {
-		return
-	}
-
-	if err = store.Client.Ping(context.Background(), nil); err != nil {
+	if err = store.Client.Ping(ctxWithTimeout, nil); err != nil {
 		return
 	}
 

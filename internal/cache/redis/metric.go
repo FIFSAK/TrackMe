@@ -64,6 +64,7 @@ func (c *MetricCache) List(ctx context.Context, filters metric.Filters) ([]metri
 	}
 
 	if err = c.cache.Set(ctx, cacheKey, payload, 5*time.Minute).Err(); err != nil {
+		return nil, err
 	}
 
 	return entities, nil

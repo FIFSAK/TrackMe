@@ -9,7 +9,5 @@ type Entity struct {
 
 // New creates a new Client instance.
 func New(req Request) Entity {
-	return Entity{
-		Date: req.Date,
-	}
+	return Entity(req)
 }

@@ -7,6 +7,7 @@ import (
 	"TrackMe/internal/repository/memory"
 	"TrackMe/internal/repository/mongo"
 	"TrackMe/pkg/store"
+	"context"
 )
 
 // Configuration is an alias for a function that will take in a pointer to a Repository and modify it
@@ -42,11 +43,17 @@ func New(configs ...Configuration) (s *Repository, err error) {
 // Close then waits for all queries that have started processing on the server to finish.
 func (r *Repository) Close() {
 	if r.postgres.Client != nil {
-		r.postgres.Client.Close()
+		err := r.postgres.Client.Close()
+		if err != nil {
+			return
+		}
 	}
 
 	if r.mongo.Client != nil {
-		r.mongo.Client.Disconnect(nil)
+		err := r.mongo.Client.Disconnect(context.Background())
+		if err != nil {
+			return
+		}
 	}
 }
 
