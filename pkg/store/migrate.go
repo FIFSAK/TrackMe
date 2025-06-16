@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/golang-migrate/migrate/v4"
+	_ "github.com/golang-migrate/migrate/v4/database/mongodb"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 )
 
@@ -25,6 +26,7 @@ func Migrate(dataSourceName string) (err error) {
 		if errors.Is(err, migrate.ErrNoChange) {
 			return nil
 		}
+		return err
 	}
 
 	return

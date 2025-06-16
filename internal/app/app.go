@@ -10,6 +10,7 @@ import (
 	"TrackMe/internal/worker"
 	"TrackMe/pkg/log"
 	"TrackMe/pkg/server"
+	"TrackMe/pkg/store"
 	"context"
 	"flag"
 	"fmt"
@@ -30,14 +31,14 @@ func Run() {
 		return
 	}
 
-	//if err = runMigrations(configs.MONGO.DSN); err != nil {
-	//	logger.Error().Err(err).Msg("ERR_RUN_MIGRATIONS")
-	//	return
-	//}
+	if err = store.Migrate(configs.MONGO.DSN); err != nil {
+		logger.Error().Err(err).Msg("ERR_MIGRATE_DATABASE")
+		return
+	}
 
 	promMetrics := prometheus.New()
 	repositories, err := repository.New(
-		repository.WithMongoStore(configs.MONGO.DSN, "name"), repository.WithMemoryStore())
+		repository.WithMongoStore(configs.MONGO.DSN, "trackme"), repository.WithMemoryStore())
 	if err != nil {
 		logger.Error().Err(err).Msg("ERR_INIT_REPOSITORIES")
 		return

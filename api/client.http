@@ -9,7 +9,7 @@ Content-Type: application/json
   "source": "website",
   "channel": "organic",
   "app": "not_installed",
-  "last_login": "2023-06-12T08:20:00Z",
+  "last_login": "2025-06-16T08:20:00Z",
   "contracts": []
 }
 
@@ -54,7 +54,7 @@ Content-Type: application/json
   "source": "referral",
   "channel": "friend",
   "app": "installed",
-  "last_login": "2023-06-15T15:30:00Z",
+  "last_login": "2025-06-16T15:30:00Z",
   "contracts": [
     {
       "name": "Подписка на сервис",
@@ -64,7 +64,7 @@ Content-Type: application/json
       "expiration_date": "2026-06-01T12:00:00Z",
       "amount": 10000.00,
       "payment_frequency": "monthly",
-      "autopayment": "disabled"
+      "autopayment": "enabled"
     }
   ]
 }

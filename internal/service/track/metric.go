@@ -186,7 +186,7 @@ func (s *Service) calculateDAU(ctx context.Context, timestamp time.Time) error {
 	startOfDay := time.Date(timestamp.Year(), timestamp.Month(), timestamp.Day(), 0, 0, 0, 0, timestamp.Location())
 
 	count, err := s.clientRepository.Count(ctx, bson.M{
-		"last_login.date": bson.M{
+		"last_login": bson.M{
 			"$gte": startOfDay,
 		},
 	})
@@ -213,14 +213,14 @@ func (s *Service) calculateMAU(ctx context.Context, timestamp time.Time) error {
 	startOfMonth := time.Now().Add(-time.Hour * 24 * 30)
 
 	count, err := s.clientRepository.Count(ctx, bson.M{
-		"last_login.date": bson.M{
+		"last_login": bson.M{
 			"$gte": startOfMonth,
 		},
 	})
 	if err != nil {
 		return err
 	}
-	metric, err := s.createMetric("", metric.MAU, float64(count), "day", timestamp, nil)
+	metric, err := s.createMetric("", metric.MAU, float64(count), "month", timestamp, nil)
 	if err != nil {
 		return err
 	}
@@ -467,7 +467,11 @@ func (s *Service) calculateRollbackCount(ctx context.Context, timestamp time.Tim
 				Value:     &newValue,
 				Interval:  &interval,
 				CreatedAt: &timestamp,
-				Metadata:  nil,
+				Metadata:  make(map[string]string),
+			}
+
+			if err != nil {
+				return fmt.Errorf("failed to create updated rollback metric: %w", err)
 			}
 
 			if _, err = s.MetricRepository.Update(ctx, updated.ID, updated); err != nil {
@@ -1036,9 +1040,13 @@ func (s *Service) calculateAutoPaymentRate(ctx context.Context, timestamp time.T
 }
 
 func (s *Service) createMetric(id string, metricType metric.Type, value float64, interval string, timestamp time.Time, metaData map[string]string) (metric.Entity, error) {
-
 	if id == "" {
 		id = primitive.NewObjectID().Hex()
+	}
+
+	// Ensure metadata is never nil
+	if metaData == nil {
+		metaData = make(map[string]string)
 	}
 
 	return metric.Entity{

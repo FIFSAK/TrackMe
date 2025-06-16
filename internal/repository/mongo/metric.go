@@ -54,7 +54,7 @@ func (r *MetricRepository) Add(ctx context.Context, data metric.Entity) (string,
 	if err != nil {
 		return "", err
 	}
-	res, err := r.db.InsertOne(ctx, bson.M{"_id": objId, "type": data.Type, "value": data.Value, "interval": data.Interval, "created_at": data.CreatedAt, "updated_at": time.Now()})
+	res, err := r.db.InsertOne(ctx, bson.M{"_id": objId, "type": data.Type, "value": data.Value, "interval": data.Interval, "created_at": data.CreatedAt, "updated_at": time.Now(), "metadata": data.Metadata})
 	if err != nil {
 		return "", err
 	}
@@ -76,6 +76,7 @@ func (r *MetricRepository) Update(ctx context.Context, id string, data metric.En
 			"interval":   data.Interval,
 			"created_at": data.CreatedAt,
 			"updated_at": time.Now(),
+			"metadata":   data.Metadata,
 			// Add other fields but NOT id/_id
 		},
 	}
