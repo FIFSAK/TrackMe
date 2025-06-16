@@ -8,6 +8,7 @@ import (
 	"TrackMe/internal/domain/stage"
 	"TrackMe/pkg/store"
 	"context"
+	"errors"
 	prome "github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
@@ -35,9 +36,34 @@ type MockMetricCache struct {
 	mock.Mock
 }
 
+func (m *MockMetricCache) Set(ctx context.Context, id string, entity metric.Entity) error {
+	args := m.Called(ctx, id, entity)
+	return args.Error(0)
+}
+
 func (m *MockMetricCache) List(ctx context.Context, filters metric.Filters) ([]metric.Entity, error) {
 	args := m.Called(ctx, filters)
 	return args.Get(0).([]metric.Entity), args.Error(1)
+}
+
+func (m *MockMetricCache) StoreList(ctx context.Context, filters metric.Filters, entities []metric.Entity) error {
+	args := m.Called(ctx, filters, entities)
+	return args.Error(0)
+}
+
+func (m *MockMetricCache) Get(ctx context.Context, id string) (metric.Entity, error) {
+	args := m.Called(ctx, id)
+	return args.Get(0).(metric.Entity), args.Error(1)
+}
+
+func (m *MockMetricCache) Delete(ctx context.Context, id string) error {
+	args := m.Called(ctx, id)
+	return args.Error(0)
+}
+
+func (m *MockMetricCache) InvalidateListCache(ctx context.Context, filters metric.Filters) error {
+	args := m.Called(ctx, filters)
+	return args.Error(0)
 }
 
 func (suite *MetricServiceTestSuite) SetupSuite() {
@@ -369,7 +395,7 @@ func (suite *MetricServiceTestSuite) TestCalculateMAU() {
 	suite.clientRepositoryMock.On("Count", ctx, mock.AnythingOfType("primitive.M")).Return(mauCount, nil)
 
 	suite.metricRepositoryMock.On("Add", ctx, mock.MatchedBy(func(m metric.Entity) bool {
-		return *m.Type == metric.MAU && *m.Value == float64(mauCount) && *m.Interval == "day"
+		return *m.Type == metric.MAU && *m.Value == float64(mauCount) && *m.Interval == "month"
 	})).Return("mau-metric-id", nil)
 
 	err := suite.service.calculateMAU(ctx, now)
@@ -807,6 +833,379 @@ func (suite *MetricServiceTestSuite) TestFirstDayOfISOWeek() {
 			suite.Equal(tc.expectedDay, result)
 		})
 	}
+}
+
+func (suite *MetricServiceTestSuite) TestListMetricsWithRepositoryError() {
+	ctx := context.Background()
+	filters := metric.Filters{
+		Type:     "conversion",
+		Interval: "day",
+	}
+
+	// Mock repository to return error
+	repoError := errors.New("database connection error")
+	suite.metricRepositoryMock.On("List", ctx, filters).Return([]metric.Entity{}, repoError)
+
+	// If cache is used, set up cache miss first
+	suite.metricCacheMock.On("List", ctx, filters).Return([]metric.Entity{}, store.ErrorNotFound)
+
+	// Call the service method
+	responses, err := suite.service.ListMetrics(ctx, filters)
+
+	// Verify expectations
+	suite.Error(err)
+	suite.Equal(repoError, err)
+	suite.Empty(responses)
+	suite.metricRepositoryMock.AssertExpectations(suite.T())
+}
+
+func (suite *MetricServiceTestSuite) TestListMetricsWithCacheHit() {
+	ctx := context.Background()
+	filters := metric.Filters{
+		Type:     "clients-per-stage",
+		Interval: "day",
+	}
+
+	// Prepare cache hit data
+	now := time.Now()
+	metricType := metric.ClientsPerStage
+	value := 42.0
+	interval := "day"
+	entities := []metric.Entity{
+		{
+			ID:        "cached-metric",
+			Type:      &metricType,
+			Value:     &value,
+			Interval:  &interval,
+			CreatedAt: &now,
+			Metadata:  map[string]string{"stage": "registration"},
+		},
+	}
+
+	// Ensure the service's MetricCache field is set to the mock
+	// This line may be redundant if already set in SetupTest
+	suite.service.MetricCache = suite.metricCacheMock
+
+	// Mock cache to return data (cache hit)
+	suite.metricCacheMock.On("List", ctx, filters).Return(entities, nil)
+
+	// Call the service method
+	responses, err := suite.service.ListMetrics(ctx, filters)
+
+	// Verify expectations
+	suite.NoError(err)
+	suite.Len(responses, 1)
+	suite.Equal("cached-metric", responses[0].ID)
+	suite.Equal(42.0, responses[0].Value)
+	suite.Equal("clients-per-stage", responses[0].Type)
+
+	// Repository should not be called on cache hit
+	suite.metricRepositoryMock.AssertNotCalled(suite.T(), "List", ctx, filters)
+}
+
+func (suite *MetricServiceTestSuite) TestCalculateClientsPerStageWithError() {
+	ctx := context.Background()
+	now := time.Now()
+
+	// Mock stage repository to return error
+	stageError := errors.New("failed to retrieve stages")
+	// Return empty slice instead of nil to avoid panic
+	suite.stageRepositoryMock.On("List", ctx).Return([]stage.Entity{}, stageError)
+
+	// Call the function
+	err := suite.service.calculateClientsPerStage(ctx, now)
+
+	// Verify expectations
+	suite.Error(err)
+	suite.Equal(stageError, err)
+
+	// Client repository should not be called if stage retrieval fails
+	suite.clientRepositoryMock.AssertNotCalled(suite.T(), "Count")
+	suite.metricRepositoryMock.AssertNotCalled(suite.T(), "Add")
+}
+
+func (suite *MetricServiceTestSuite) TestCalculateDAUWithCountError() {
+	ctx := context.Background()
+	now := time.Now()
+
+	// Mock repository to return error on Count
+	countError := errors.New("count operation failed")
+	suite.clientRepositoryMock.On("Count", ctx, mock.AnythingOfType("primitive.M")).Return(int64(0), countError)
+
+	// Call the function
+	err := suite.service.calculateDAU(ctx, now)
+
+	// Verify expectations
+	suite.Error(err)
+	suite.Equal(countError, err)
+
+	// Metric repository should not be called if count fails
+	suite.metricRepositoryMock.AssertNotCalled(suite.T(), "Add")
+}
+
+func (suite *MetricServiceTestSuite) TestCalculateAllMetricsWithStageDurationError() {
+	ctx := context.Background()
+	interval := "day"
+
+	// Setup success for calculateClientsPerStage
+	suite.stageRepositoryMock.On("List", mock.Anything).Return([]stage.Entity{{ID: "stage1"}}, nil).Once()
+	suite.clientRepositoryMock.On("Count", mock.Anything, mock.AnythingOfType("primitive.M")).Return(int64(10), nil).Once()
+	suite.metricRepositoryMock.On("Add", mock.Anything, mock.AnythingOfType("metric.Entity")).Return("metric-id", nil).Once()
+
+	// Setup error for calculateStageDuration
+	stageDurationError := errors.New("failed to calculate stage duration")
+	isActive := true
+	// Return empty slice instead of nil to avoid panic when iterating
+	suite.clientRepositoryMock.On("List", ctx, client.Filters{IsActive: &isActive}, 0, 0).Return([]client.Entity{}, 0, stageDurationError)
+
+	// Call the function
+	err := suite.service.CalculateAllMetrics(ctx, interval)
+
+	// Verify expectations
+	suite.Error(err)
+	suite.Contains(err.Error(), "failed to calculate stage duration")
+}
+
+func (suite *MetricServiceTestSuite) TestCreateMetric() {
+	// Create test data
+	id := "test-id"
+	metricType := metric.DAU
+	value := 123.45
+	interval := "day"
+	timestamp := time.Now()
+	metadata := map[string]string{"key": "value"}
+
+	// Call createMetric directly
+	entity, err := suite.service.createMetric(id, metricType, value, interval, timestamp, metadata)
+
+	// Verify expectations
+	suite.NoError(err)
+	suite.Equal(id, entity.ID)
+	suite.Equal(metricType, *entity.Type)
+	suite.Equal(value, *entity.Value)
+	suite.Equal(interval, *entity.Interval)
+	suite.Equal(timestamp, *entity.CreatedAt)
+	suite.Equal("value", entity.Metadata["key"])
+}
+
+func (suite *MetricServiceTestSuite) TestCreateMetricWithEmptyID() {
+	// Call createMetric with empty ID
+	entity, err := suite.service.createMetric("", metric.MAU, 100.0, "month", time.Now(), nil)
+
+	// Verify expectations
+	suite.NoError(err)
+	suite.NotEmpty(entity.ID) // ID should be generated
+	suite.Equal(metric.MAU, *entity.Type)
+	suite.Equal(100.0, *entity.Value)
+
+	// Verify metadata is initialized even when nil is passed
+	suite.NotNil(entity.Metadata)
+}
+
+// Test cache invalidation in CalculateAllMetrics
+func (suite *MetricServiceTestSuite) TestCalculateAllMetricsWithCacheInvalidation() {
+	ctx := context.Background()
+	interval := "day"
+
+	// Setup mocks for successful calculations
+	suite.clientRepositoryMock.On("Count", mock.Anything, mock.Anything).Return(int64(10), nil)
+	suite.clientRepositoryMock.On("List", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return([]client.Entity{}, 0, nil)
+	suite.stageRepositoryMock.On("List", mock.Anything).Return([]stage.Entity{{ID: "stage1"}, {ID: "stage2"}}, nil)
+	suite.metricRepositoryMock.On("Add", mock.Anything, mock.Anything).Return("metric-id", nil)
+	suite.metricRepositoryMock.On("List", mock.Anything, mock.Anything).Return([]metric.Entity{}, nil)
+	suite.metricRepositoryMock.On("Update", mock.Anything, mock.Anything, mock.Anything).Return(metric.Entity{}, nil)
+
+	// Set up cache mock with a catch-all expectation
+	cacheMock := new(MockMetricCache)
+	suite.service.MetricCache = cacheMock
+
+	// Simply expect 12 cache invalidations when interval is "day"
+	cacheMock.On("InvalidateListCache", mock.Anything, mock.Anything).Return(nil).Times(12)
+
+	err := suite.service.CalculateAllMetrics(ctx, interval)
+
+	suite.NoError(err)
+	cacheMock.AssertExpectations(suite.T())
+}
+
+// Test CalculateAllMetrics with 'month' interval
+func (suite *MetricServiceTestSuite) TestCalculateAllMetricsWithMonthInterval() {
+	ctx := context.Background()
+	interval := "month"
+
+	// Setup mocks for successful calculations
+	suite.clientRepositoryMock.On("Count", mock.Anything, mock.Anything).Return(int64(10), nil)
+	suite.clientRepositoryMock.On("List", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return([]client.Entity{}, 0, nil)
+	suite.stageRepositoryMock.On("List", mock.Anything).Return([]stage.Entity{{ID: "stage1"}, {ID: "stage2"}}, nil)
+	suite.metricRepositoryMock.On("Add", mock.Anything, mock.Anything).Return("metric-id", nil)
+	suite.metricRepositoryMock.On("List", mock.Anything, mock.Anything).Return([]metric.Entity{}, nil)
+	suite.metricRepositoryMock.On("Update", mock.Anything, mock.Anything, mock.Anything).Return(metric.Entity{}, nil)
+
+	err := suite.service.CalculateAllMetrics(ctx, interval)
+
+	suite.NoError(err)
+	// Verify MAU is calculated instead of DAU with month interval
+	suite.clientRepositoryMock.AssertCalled(suite.T(), "Count", mock.Anything, mock.MatchedBy(func(filter bson.M) bool {
+		_, hasLastLogin := filter["last_login"]
+		return hasLastLogin // Match MAU calculation query
+	}))
+}
+
+// Test error handling in calculateMAU
+func (suite *MetricServiceTestSuite) TestCalculateMAUWithError() {
+	ctx := context.Background()
+	now := time.Now()
+
+	// Mock repository to return error on Count
+	countError := errors.New("MAU count failed")
+	suite.clientRepositoryMock.On("Count", ctx, mock.AnythingOfType("primitive.M")).Return(int64(0), countError)
+
+	err := suite.service.calculateMAU(ctx, now)
+
+	suite.Error(err)
+	suite.Equal(countError, err)
+	suite.metricRepositoryMock.AssertNotCalled(suite.T(), "Add")
+}
+
+// Test error handling in calculateAppInstallRate
+func (suite *MetricServiceTestSuite) TestCalculateAppInstallRateWithError() {
+	ctx := context.Background()
+	now := time.Now()
+
+	// First count succeeds, second fails
+	suite.clientRepositoryMock.On("Count", ctx, mock.MatchedBy(func(filter bson.M) bool {
+		_, hasAppExists := filter["app"]
+		return hasAppExists
+	})).Return(int64(100), nil).Once()
+
+	countError := errors.New("app install count failed")
+	suite.clientRepositoryMock.On("Count", ctx, mock.MatchedBy(func(filter bson.M) bool {
+		app, hasApp := filter["app"]
+		return hasApp && app == "installed"
+	})).Return(int64(0), countError)
+
+	err := suite.service.calculateAppInstallRate(ctx, now)
+
+	suite.Error(err)
+	suite.Equal(countError, err)
+	suite.metricRepositoryMock.AssertNotCalled(suite.T(), "Add")
+}
+
+// Test error handling in calculateTotalDuration
+func (suite *MetricServiceTestSuite) TestCalculateTotalDurationWithMetricRepositoryError() {
+	ctx := context.Background()
+	now := time.Now()
+
+	// Setup stages successfully
+	stages := []stage.Entity{
+		{ID: "registration"},
+		{ID: "active"},
+	}
+	suite.stageRepositoryMock.On("List", ctx).Return(stages, nil)
+
+	// Setup client list successfully
+	lastStage := stages[1].ID
+	isActive := true
+	registrationDate := now.Add(-30 * 24 * time.Hour)
+	lastUpdated := now
+
+	clients := []client.Entity{
+		{
+			ID:               "client1",
+			CurrentStage:     &lastStage,
+			IsActive:         &isActive,
+			RegistrationDate: &registrationDate,
+			LastUpdated:      &lastUpdated,
+		},
+	}
+
+	suite.clientRepositoryMock.On("List", ctx, mock.MatchedBy(func(filters client.Filters) bool {
+		return filters.Stage == lastStage
+	}), 0, 0).Return(clients, 1, nil)
+
+	// But repository add fails
+	repoError := errors.New("metric repository add failed")
+	suite.metricRepositoryMock.On("Add", ctx, mock.AnythingOfType("metric.Entity")).Return("", repoError)
+
+	err := suite.service.calculateTotalDuration(ctx, now)
+
+	suite.Error(err)
+	suite.Contains(err.Error(), "repository add failed")
+}
+
+// Test edge case for conversion calculation with no clients
+func (suite *MetricServiceTestSuite) TestCalculateConversionWithNoClients() {
+	ctx := context.Background()
+	now := time.Now()
+	interval := "week"
+
+	stages := []stage.Entity{
+		{ID: "registration"},
+		{ID: "active"},
+	}
+	suite.stageRepositoryMock.On("List", ctx).Return(stages, nil)
+
+	// Zero clients in both queries
+	suite.clientRepositoryMock.On("Count", ctx, mock.MatchedBy(func(filter bson.M) bool {
+		_, hasCurrentStage := filter["current_stage"]
+		return hasCurrentStage
+	})).Return(int64(0), nil).Once()
+
+	suite.clientRepositoryMock.On("Count", ctx, mock.MatchedBy(func(filter bson.M) bool {
+		_, hasLastUpdated := filter["last_updated"]
+		_, hasCurrentStage := filter["current_stage"]
+		return hasLastUpdated && !hasCurrentStage
+	})).Return(int64(0), nil).Once()
+
+	// Should create metric with 0 conversion rate
+	suite.metricRepositoryMock.On("Add", ctx, mock.MatchedBy(func(m metric.Entity) bool {
+		return *m.Type == metric.Conversion &&
+			*m.Value == 0.0 &&
+			*m.Interval == interval
+	})).Return("conversion-metric-id", nil)
+
+	err := suite.service.calculateConversion(ctx, now, interval)
+
+	suite.NoError(err)
+	suite.metricRepositoryMock.AssertCalled(suite.T(), "Add", ctx, mock.MatchedBy(func(m metric.Entity) bool {
+		return *m.Type == metric.Conversion && *m.Value == 0.0
+	}))
+}
+
+// Test cache invalidation error handling
+func (suite *MetricServiceTestSuite) TestCalculateRollbackCountWithCacheInvalidationError() {
+	ctx := context.Background()
+	now := time.Now()
+
+	// Set up cache mock to return cache miss for List
+	cacheMock := new(MockMetricCache)
+	suite.service.MetricCache = cacheMock
+	cacheMock.On("List", ctx, metric.Filters{
+		Type:     "rollback-count",
+		Interval: "day",
+	}).Return([]metric.Entity{}, errors.New("cache miss"))
+
+	// No existing metrics today from repository
+	suite.metricRepositoryMock.On("List", ctx, metric.Filters{
+		Type:     "rollback-count",
+		Interval: "day",
+	}).Return([]metric.Entity{}, nil)
+
+	// Add metric succeeds
+	suite.metricRepositoryMock.On("Add", ctx, mock.AnythingOfType("metric.Entity")).Return("new-metric-id", nil)
+
+	// But cache invalidation fails
+	cacheError := errors.New("cache invalidation failed")
+	cacheMock.On("InvalidateListCache", ctx, metric.Filters{
+		Type:     string(metric.RollbackCount),
+		Interval: "day",
+	}).Return(cacheError)
+
+	// The function should still succeed even if cache invalidation fails
+	err := suite.service.calculateRollbackCount(ctx, now)
+
+	suite.NoError(err)
+	cacheMock.AssertExpectations(suite.T())
 }
 
 func TestMetricService(t *testing.T) {

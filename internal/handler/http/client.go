@@ -164,8 +164,16 @@ func (h *ClientHandler) update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if clientResp.RegistrationDate == time.Now().String() {
-		response.Created(w, r, clientResp)
+	regDate, err := time.Parse(time.RFC3339, clientResp.RegistrationDate)
+	if err == nil {
+		// Truncate both times to hour precision for comparison
+		lastUpdatedHour := clientResp.LastUpdated.Truncate(time.Hour)
+		regDateHour := regDate.Truncate(time.Hour)
+
+		if lastUpdatedHour.Equal(regDateHour) {
+			response.Created(w, r, clientResp)
+			return
+		}
 	}
 
 	response.OK(w, r, clientResp, nil)

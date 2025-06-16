@@ -78,7 +78,7 @@ func (s *Service) UpdateClient(ctx context.Context, id string, req client.Reques
 
 	updated.CurrentStage = &newStage
 	if req.Stage == "prev" {
-		err := s.calculateRollbackCount(ctx, time.Now())
+		err := s.calculateRollbackCount(ctx, now)
 		if err != nil {
 			return client.Response{}, err
 		}

@@ -260,3 +260,11 @@ Content-Type: application/json
 {
   "stage": "modifications"
 }
+
+### Move client22 to next stage (approval_waiting -> modifications)
+PUT http://localhost/api/v1/clients/507f1f77bcf86cd799439090/stage
+Content-Type: application/json
+
+{
+  "stage": "modifications"
+}

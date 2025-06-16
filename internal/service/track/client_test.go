@@ -6,7 +6,10 @@ import (
 	"TrackMe/internal/domain/metric"
 	"TrackMe/internal/domain/prometheus"
 	"TrackMe/internal/domain/stage"
+	"TrackMe/pkg/store"
 	"context"
+	"errors"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 	"go.mongodb.org/mongo-driver/bson"
@@ -82,23 +85,26 @@ type ClientServiceTestSuite struct {
 	clientRepositoryMock *MockClientRepository
 	stageRepositoryMock  *MockStageRepository
 	metricRepositoryMock *MockMetricRepository
+	metricCacheMock      *MockClientMetricCache
 	PrometheusMetrics    prometheus.Entity
 }
 
 func (suite *ClientServiceTestSuite) SetupSuite() {
-	suite.PrometheusMetrics = prometheus.New()
+	suite.PrometheusMetrics = NewForTesting()
 }
 
 func (suite *ClientServiceTestSuite) SetupTest() {
 	suite.clientRepositoryMock = new(MockClientRepository)
 	suite.stageRepositoryMock = new(MockStageRepository)
 	suite.metricRepositoryMock = new(MockMetricRepository)
+	suite.metricCacheMock = new(MockClientMetricCache)
 
 	suite.service = &Service{
 		clientRepository:  suite.clientRepositoryMock,
 		StageRepository:   suite.stageRepositoryMock,
 		MetricRepository:  suite.metricRepositoryMock,
 		PrometheusMetrics: suite.PrometheusMetrics,
+		MetricCache:       suite.metricCacheMock,
 	}
 }
 
@@ -307,6 +313,12 @@ func (suite *ClientServiceTestSuite) TestUpdateClientRollback() {
 	prevStage := "registration"
 	suite.stageRepositoryMock.On("UpdateStage", ctx, currentStage, req.Stage).Return(prevStage, nil)
 
+	// Add this missing mock expectation for the cache
+	suite.metricCacheMock.On("List", ctx, metric.Filters{
+		Type:     "rollback-count",
+		Interval: "day",
+	}).Return([]metric.Entity{}, nil)
+
 	suite.metricRepositoryMock.On("List", ctx, metric.Filters{
 		Type:     "rollback-count",
 		Interval: "day",
@@ -342,6 +354,7 @@ func (suite *ClientServiceTestSuite) TestUpdateClientRollback() {
 	suite.NoError(err)
 	suite.Equal(prevStage, response.CurrentStage)
 }
+
 func (suite *ClientServiceTestSuite) TestListClientsWithStageFilter() {
 	ctx := context.Background()
 	filters := client.Filters{
@@ -437,7 +450,7 @@ func (suite *ClientServiceTestSuite) TestListClientsWithPagination() {
 
 	name := "Test User"
 	email := "test@example.com"
-	stage := "registration"
+	curStage := "registration"
 	isActive := true
 	source := "website"
 	channel := "direct"
@@ -452,7 +465,7 @@ func (suite *ClientServiceTestSuite) TestListClientsWithPagination() {
 				ID:               "client1",
 				Name:             &name,
 				Email:            &email,
-				CurrentStage:     &stage,
+				CurrentStage:     &curStage,
 				IsActive:         &isActive,
 				RegistrationDate: &now,
 				LastUpdated:      &now,
@@ -466,7 +479,7 @@ func (suite *ClientServiceTestSuite) TestListClientsWithPagination() {
 				ID:               "client2",
 				Name:             &name,
 				Email:            &email,
-				CurrentStage:     &stage,
+				CurrentStage:     &curStage,
 				IsActive:         &isActive,
 				RegistrationDate: &now,
 				LastUpdated:      &now,
@@ -498,7 +511,7 @@ func (suite *ClientServiceTestSuite) TestListClientsWithPagination() {
 				ID:               "client3",
 				Name:             &name,
 				Email:            &email,
-				CurrentStage:     &stage,
+				CurrentStage:     &curStage,
 				IsActive:         &isActive,
 				RegistrationDate: &now,
 				LastUpdated:      &now,
@@ -512,7 +525,7 @@ func (suite *ClientServiceTestSuite) TestListClientsWithPagination() {
 				ID:               "client4",
 				Name:             &name,
 				Email:            &email,
-				CurrentStage:     &stage,
+				CurrentStage:     &curStage,
 				IsActive:         &isActive,
 				RegistrationDate: &now,
 				LastUpdated:      &now,
@@ -544,7 +557,7 @@ func (suite *ClientServiceTestSuite) TestListClientsWithPagination() {
 				ID:               "client5",
 				Name:             &name,
 				Email:            &email,
-				CurrentStage:     &stage,
+				CurrentStage:     &curStage,
 				IsActive:         &isActive,
 				RegistrationDate: &now,
 				LastUpdated:      &now,
@@ -565,6 +578,329 @@ func (suite *ClientServiceTestSuite) TestListClientsWithPagination() {
 		suite.Len(responses, 1)
 		suite.Equal("client5", responses[0].ID)
 	})
+}
+
+func TestServiceConfiguration(t *testing.T) {
+	// Create mock dependencies using existing mocks from client_test.go
+	clientRepo := new(MockClientRepository)
+	stageRepo := new(MockStageRepository)
+	metricRepo := new(MockMetricRepository)
+	metricCache := new(MockClientMetricCache)
+	prometheusMetrics := prometheus.New()
+
+	t.Run("new service with no config", func(t *testing.T) {
+		service, err := New()
+		assert.NoError(t, err)
+		assert.NotNil(t, service)
+	})
+
+	t.Run("with client repository", func(t *testing.T) {
+		service, err := New(WithClientRepository(clientRepo))
+		assert.NoError(t, err)
+		assert.Equal(t, clientRepo, service.clientRepository)
+	})
+
+	t.Run("with stage repository", func(t *testing.T) {
+		service, err := New(WithStageRepository(stageRepo))
+		assert.NoError(t, err)
+		assert.Equal(t, stageRepo, service.StageRepository)
+	})
+
+	t.Run("with metric repository", func(t *testing.T) {
+		service, err := New(WithMetricRepository(metricRepo))
+		assert.NoError(t, err)
+		assert.Equal(t, metricRepo, service.MetricRepository)
+	})
+
+	t.Run("with prometheus metrics", func(t *testing.T) {
+		service, err := New(WithPrometheusMetrics(prometheusMetrics))
+		assert.NoError(t, err)
+		assert.Equal(t, prometheusMetrics, service.PrometheusMetrics)
+	})
+
+	t.Run("with metric cache", func(t *testing.T) {
+		service, err := New(WithMetricCache(metricCache))
+		assert.NoError(t, err)
+		assert.Equal(t, metricCache, service.MetricCache)
+	})
+
+	t.Run("with all configurations", func(t *testing.T) {
+		service, err := New(
+			WithClientRepository(clientRepo),
+			WithStageRepository(stageRepo),
+			WithMetricRepository(metricRepo),
+			WithPrometheusMetrics(prometheusMetrics),
+			WithMetricCache(metricCache),
+		)
+
+		assert.NoError(t, err)
+		assert.Equal(t, clientRepo, service.clientRepository)
+		assert.Equal(t, stageRepo, service.StageRepository)
+		assert.Equal(t, metricRepo, service.MetricRepository)
+		assert.Equal(t, prometheusMetrics, service.PrometheusMetrics)
+		assert.Equal(t, metricCache, service.MetricCache)
+	})
+
+	t.Run("with configuration error", func(t *testing.T) {
+		expectedErr := errors.New("configuration error")
+		errorConfig := func(s *Service) error {
+			return expectedErr
+		}
+
+		service, err := New(errorConfig)
+		assert.Error(t, err)
+		assert.Equal(t, expectedErr, err)
+		assert.Equal(t, Service{}, *service)
+	})
+}
+
+func (suite *ClientServiceTestSuite) TestUpdateClientWithStageUpdateError() {
+	ctx := context.Background()
+	clientID := "client123"
+	currentStage := "registration"
+
+	// Setup existing client
+	name := "Test Client"
+	email := "test@example.com"
+	isActive := true
+	existingClient := client.Entity{
+		ID:           clientID,
+		Name:         &name,
+		Email:        &email,
+		CurrentStage: &currentStage,
+		IsActive:     &isActive,
+	}
+
+	// Setup request
+	req := client.Request{
+		Stage: "next",
+	}
+
+	// Mock get client
+	suite.clientRepositoryMock.On("Get", ctx, clientID).Return(existingClient, nil)
+
+	// Mock stage update to return error
+	stageError := errors.New("invalid stage transition")
+	suite.stageRepositoryMock.On("UpdateStage", ctx, currentStage, req.Stage).Return("", stageError)
+
+	// Test
+	_, err := suite.service.UpdateClient(ctx, clientID, req)
+
+	// Verify
+	suite.Error(err)
+	suite.Contains(err.Error(), "invalid stage transition")
+	suite.clientRepositoryMock.AssertExpectations(suite.T())
+	suite.stageRepositoryMock.AssertExpectations(suite.T())
+}
+
+func (suite *ClientServiceTestSuite) TestUpdateClientWithGetClientError() {
+	ctx := context.Background()
+	clientID := "client123"
+
+	// Setup request
+	req := client.Request{
+		Stage: "next",
+	}
+
+	// Mock get client to return error
+	getError := errors.New("database error")
+	suite.clientRepositoryMock.On("Get", ctx, clientID).Return(client.Entity{}, getError)
+
+	// Test
+	_, err := suite.service.UpdateClient(ctx, clientID, req)
+
+	// Verify
+	suite.Error(err)
+	suite.Equal(getError, err)
+	suite.clientRepositoryMock.AssertExpectations(suite.T())
+}
+
+func (suite *ClientServiceTestSuite) TestListClientsWithNonExistentID() {
+	ctx := context.Background()
+	nonExistentID := "non-existent-id"
+
+	// Create filter with non-existent ID
+	filters := client.Filters{
+		ID: nonExistentID,
+	}
+	limit := 10
+	offset := 0
+
+	// Mock repository to return not found error when ID doesn't exist
+	// Note: This assumes we want to change the behavior to return an error rather than empty slice
+	suite.clientRepositoryMock.On("List", ctx, filters, limit, offset).Return(
+		[]client.Entity{}, 0, store.ErrorNotFound)
+
+	// Call the service method
+	responses, total, err := suite.service.ListClients(ctx, filters, limit, offset)
+
+	// Verify expectations
+	suite.Error(err)
+	suite.Equal(store.ErrorNotFound, err)
+	suite.Equal(0, total)
+	suite.Empty(responses)
+	suite.clientRepositoryMock.AssertExpectations(suite.T())
+}
+
+func (suite *ClientServiceTestSuite) TestUpdateClientWithEmptyName() {
+	ctx := context.Background()
+	clientID := "client123"
+	currentStage := "registration"
+
+	// Setup existing client
+	name := "Test Client"
+	email := "test@example.com"
+	isActive := true
+	now := time.Now()
+	source := "website"
+	channel := "direct"
+	app := "installed"
+
+	existingClient := client.Entity{
+		ID:               clientID,
+		Name:             &name,
+		Email:            &email,
+		CurrentStage:     &currentStage,
+		IsActive:         &isActive,
+		LastUpdated:      &now,
+		RegistrationDate: &now,
+		Source:           &source,
+		Channel:          &channel,
+		App:              &app,
+		LastLogin:        &now,
+		Contracts:        []contract.Entity{},
+	}
+
+	// Setup request with empty name
+	req := client.Request{
+		Stage:    "next",
+		Name:     "",
+		Email:    "updated@example.com",
+		IsActive: &isActive,
+		Source:   "website",
+		Channel:  "direct",
+	}
+
+	// Mock get client
+	suite.clientRepositoryMock.On("Get", ctx, clientID).Return(existingClient, nil)
+
+	// Mock stage update
+	suite.stageRepositoryMock.On("UpdateStage", ctx, currentStage, req.Stage).Return("active", nil)
+
+	// Mock update client - should set default name
+	suite.clientRepositoryMock.On(
+		"Update",
+		ctx,
+		clientID,
+		mock.MatchedBy(func(e client.Entity) bool {
+			return e.ID == clientID && *e.Name == "Guest_"+clientID
+		}),
+	).Return(client.Entity{
+		ID:               clientID,
+		Name:             stringPtr("Guest_" + clientID),
+		CurrentStage:     stringPtr("active"),
+		IsActive:         boolPtr(true),
+		Email:            &email,
+		LastUpdated:      &now,
+		RegistrationDate: &now,
+		Source:           &source,
+		Channel:          &channel,
+		App:              &app,
+		LastLogin:        &now,
+	}, nil)
+
+	// Test
+	response, err := suite.service.UpdateClient(ctx, clientID, req)
+
+	// Verify
+	suite.NoError(err)
+	suite.Equal("Guest_"+clientID, response.Name)
+}
+
+func (suite *ClientServiceTestSuite) TestUpdateClientWithUpdateError() {
+	ctx := context.Background()
+	clientID := "client123"
+	currentStage := "registration"
+
+	// Setup existing client
+	name := "Test Client"
+	email := "test@example.com"
+	existingClient := client.Entity{
+		ID:           clientID,
+		Name:         &name,
+		Email:        &email,
+		CurrentStage: &currentStage,
+	}
+
+	// Setup request
+	req := client.Request{
+		Stage: "next",
+		Name:  "Updated Name",
+	}
+
+	// Mock get client
+	suite.clientRepositoryMock.On("Get", ctx, clientID).Return(existingClient, nil)
+
+	// Mock stage update
+	suite.stageRepositoryMock.On("UpdateStage", ctx, currentStage, req.Stage).Return("active", nil)
+
+	// Mock update client to return error
+	updateError := errors.New("database error")
+	suite.clientRepositoryMock.On(
+		"Update",
+		ctx,
+		clientID,
+		mock.Anything,
+	).Return(client.Entity{}, updateError)
+
+	// Test
+	_, err := suite.service.UpdateClient(ctx, clientID, req)
+
+	// Verify
+	suite.Error(err)
+	suite.Equal(updateError, err)
+}
+
+// Helper functions
+func stringPtr(s string) *string {
+	return &s
+}
+
+func boolPtr(b bool) *bool {
+	return &b
+}
+
+type MockClientMetricCache struct {
+	mock.Mock
+}
+
+func (m *MockClientMetricCache) Set(ctx context.Context, id string, entity metric.Entity) error {
+	args := m.Called(ctx, id, entity)
+	return args.Error(0)
+}
+
+func (m *MockClientMetricCache) List(ctx context.Context, filters metric.Filters) ([]metric.Entity, error) {
+	args := m.Called(ctx, filters)
+	return args.Get(0).([]metric.Entity), args.Error(1)
+}
+
+func (m *MockClientMetricCache) StoreList(ctx context.Context, filters metric.Filters, entities []metric.Entity) error {
+	args := m.Called(ctx, filters, entities)
+	return args.Error(0)
+}
+
+func (m *MockClientMetricCache) Get(ctx context.Context, id string) (metric.Entity, error) {
+	args := m.Called(ctx, id)
+	return args.Get(0).(metric.Entity), args.Error(1)
+}
+
+func (m *MockClientMetricCache) Delete(ctx context.Context, id string) error {
+	args := m.Called(ctx, id)
+	return args.Error(0)
+}
+
+func (m *MockClientMetricCache) InvalidateListCache(ctx context.Context, filters metric.Filters) error {
+	return nil
 }
 
 func TestClientService(t *testing.T) {

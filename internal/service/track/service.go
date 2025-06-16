@@ -27,6 +27,11 @@ func New(configs ...Configuration) (s *Service, err error) {
 
 	// Apply all Configurations passed in
 	for _, cfg := range configs {
+
+		if cfg == nil {
+			continue
+		}
+
 		// Pass the service into the configuration function
 		if err = cfg(s); err != nil {
 			return

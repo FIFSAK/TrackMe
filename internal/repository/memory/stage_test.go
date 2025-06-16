@@ -141,6 +141,51 @@ func (suite *StageRepositorySuite) TestUpdateStage() {
 	})
 }
 
+func (suite *StageRepositorySuite) TestNewStageRepositoryWithMissingFile() {
+	err := os.Rename("stages.yaml", "stages.yaml.bak")
+	suite.NoError(err)
+
+	repo := NewStageRepository()
+	suite.NotNil(repo, "Repository should be created even with missing file")
+
+	err = os.Rename("stages.yaml.bak", "stages.yaml")
+	suite.NoError(err)
+}
+
+func (suite *StageRepositorySuite) TestNewStageRepositoryWithInvalidYaml() {
+	yamlData, err := os.ReadFile("stages.yaml")
+	suite.NoError(err)
+
+	err = os.WriteFile("stages.yaml", []byte("invalid: yaml: content:"), 0644)
+	suite.NoError(err)
+
+	repo := NewStageRepository()
+	suite.NotNil(repo, "Repository should be created even with invalid YAML")
+
+	err = os.WriteFile("stages.yaml", yamlData, 0644)
+	suite.NoError(err)
+}
+
+func (suite *StageRepositorySuite) TestUpdateStageWithEmptyCurrentID() {
+	newID, err := suite.repository.UpdateStage(context.Background(), "", "stage2")
+	suite.NoError(err)
+	suite.Equal("stage2", newID)
+
+	_, err = suite.repository.UpdateStage(context.Background(), "", "non-existent")
+	suite.Error(err)
+	suite.Contains(err.Error(), "invalid direction")
+}
+
+func (suite *StageRepositorySuite) TestUpdateStageEdgeCases() {
+	_, err := suite.repository.UpdateStage(context.Background(), "stage1", "not-a-stage")
+	suite.Error(err)
+	suite.Contains(err.Error(), "invalid direction")
+
+	_, err = suite.repository.UpdateStage(context.Background(), "", "")
+	suite.Error(err)
+	suite.Contains(err.Error(), "invalid direction")
+}
+
 func TestStageRepositorySuite(t *testing.T) {
 	suite.Run(t, new(StageRepositorySuite))
 }

@@ -2,6 +2,7 @@ package http
 
 import (
 	"TrackMe/internal/domain/client"
+	"TrackMe/internal/domain/contract"
 	"TrackMe/pkg/store"
 	"bytes"
 	"context"
@@ -268,4 +269,134 @@ func TestParseBool(t *testing.T) {
 			assert.Equal(t, tt.want, *result)
 		})
 	}
+}
+func TestClientHandler_Routes(t *testing.T) {
+	mockService := new(MockTrackService)
+	handler := NewClientHandler(mockService)
+	router := handler.Routes()
+
+	isActive := true
+	mockService.On("ListClients", mock.Anything, client.Filters{
+		IsActive: &isActive,
+	}, 50, 0).Return([]client.Response{}, 0, nil)
+
+	mockService.On("UpdateClient", mock.Anything, "client1", mock.MatchedBy(func(req client.Request) bool {
+		return req.Stage == "active"
+	})).Return(client.Response{
+		ID:           "client1",
+		CurrentStage: "active",
+		IsActive:     true,
+	}, nil)
+
+	ts := httptest.NewServer(router)
+	defer ts.Close()
+
+	resp, err := http.Get(ts.URL + "/")
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+	reqBody := bytes.NewBufferString(`{"stage":"active"}`)
+	req, _ := http.NewRequest(http.MethodPut, ts.URL+"/client1/stage", reqBody)
+	req.Header.Set("Content-Type", "application/json")
+	httpClient := &http.Client{}
+	resp, err = httpClient.Do(req)
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+	mockService.AssertExpectations(t)
+}
+
+func TestClientHandler_Update_BadRequest(t *testing.T) {
+	mockService := new(MockTrackService)
+	handler := NewClientHandler(mockService)
+
+	req := httptest.NewRequest("PUT", "/clients/client1/stage", bytes.NewBufferString(`{invalid json`))
+	req.Header.Set("Content-Type", "application/json")
+
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("id", "client1")
+	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
+
+	w := httptest.NewRecorder()
+	handler.update(w, req)
+	require.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+func TestClientHandler_Update_NewClient(t *testing.T) {
+	mockService := new(MockTrackService)
+	handler := NewClientHandler(mockService)
+
+	clientRequest := client.Request{
+		Stage: "onboarding",
+	}
+
+	regDate := time.Now()
+	clientResponse := client.Response{
+		ID:               "new-client",
+		CurrentStage:     "onboarding",
+		IsActive:         true,
+		RegistrationDate: regDate.Format(time.RFC3339),
+		LastUpdated:      regDate,
+	}
+
+	mockService.On("UpdateClient", mock.Anything, "new-client", clientRequest).
+		Return(clientResponse, nil)
+
+	requestBody, _ := json.Marshal(clientRequest)
+	req := httptest.NewRequest("PUT", "/clients/new-client/stage", bytes.NewBuffer(requestBody))
+	req.Header.Set("Content-Type", "application/json")
+
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("id", "new-client")
+	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
+
+	w := httptest.NewRecorder()
+	handler.update(w, req)
+
+	require.Equal(t, http.StatusCreated, w.Code)
+}
+
+func TestClientHandler_Update_WithContracts(t *testing.T) {
+	mockService := new(MockTrackService)
+	handler := NewClientHandler(mockService)
+	now := time.Now()
+	clientRequest := client.Request{
+		Stage: "active",
+		Contracts: []contract.Request{
+			{
+				Name:             "Подписка на сервис",
+				Number:           "SUB12345",
+				Status:           "active",
+				ConclusionDate:   now,
+				ExpirationDate:   now.Add(time.Hour * 10),
+				Amount:           10000.00,
+				PaymentFrequency: "monthly",
+				AutoPayment:      "enabled",
+			},
+		},
+	}
+
+	clientResponse := client.Response{
+		ID:           "client1",
+		CurrentStage: "active",
+		IsActive:     true,
+	}
+
+	mockService.On("UpdateClient", mock.Anything, "client1", mock.MatchedBy(func(req client.Request) bool {
+		return req.Stage == "active" && len(req.Contracts) > 0 && req.Contracts[0].Name == "Подписка на сервис"
+	})).Return(clientResponse, nil)
+
+	requestBody, _ := json.Marshal(clientRequest)
+	req := httptest.NewRequest("PUT", "/clients/client1/stage", bytes.NewBuffer(requestBody))
+	req.Header.Set("Content-Type", "application/json")
+
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("id", "client1")
+	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
+
+	w := httptest.NewRecorder()
+	handler.update(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code)
+	mockService.AssertExpectations(t)
 }

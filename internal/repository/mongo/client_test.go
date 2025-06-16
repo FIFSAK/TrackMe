@@ -389,6 +389,214 @@ func (suite *RepositorySuite) createTestClients() {
 	suite.NoError(err2)
 	suite.NoError(err3)
 }
+func (suite *RepositorySuite) TestListWithAllFilters() {
+	// Reset collection
+	_, err := suite.testDatabase.DbInstance.Collection("clients").DeleteMany(
+		context.Background(), bson.M{})
+	suite.NoError(err)
+
+	// Create test clients
+	suite.createClientsWithAdditionalFields()
+
+	suite.Run("list with channel filter", func() {
+		clients, total, err := suite.repository.List(
+			context.Background(),
+			client.Filters{
+				Channel: "email",
+			}, 10, 0)
+
+		suite.NoError(err)
+		suite.GreaterOrEqual(total, 1)
+		for _, c := range clients {
+			suite.Equal("email", *c.Channel)
+		}
+	})
+
+	suite.Run("list with app status filter", func() {
+		clients, total, err := suite.repository.List(
+			context.Background(),
+			client.Filters{
+				AppStatus: "installed",
+			}, 10, 0)
+
+		suite.NoError(err)
+		suite.GreaterOrEqual(total, 1)
+		for _, c := range clients {
+			suite.Equal("installed", *c.App)
+		}
+	})
+
+	suite.Run("list with updated after filter", func() {
+		timeThreshold := time.Now().Add(-48 * time.Hour)
+		clients, _, err := suite.repository.List(
+			context.Background(),
+			client.Filters{
+				UpdatedAfter: timeThreshold,
+			}, 10, 0)
+
+		suite.NoError(err)
+		for _, c := range clients {
+			suite.True(c.LastUpdated.After(timeThreshold) || c.LastUpdated.Equal(timeThreshold))
+		}
+	})
+
+	suite.Run("list with last login after filter", func() {
+		timeThreshold := time.Now().Add(-48 * time.Hour)
+		clients, _, err := suite.repository.List(
+			context.Background(),
+			client.Filters{
+				LastLoginAfter: timeThreshold,
+			}, 10, 0)
+
+		suite.NoError(err)
+		for _, c := range clients {
+			if c.LastLogin != nil {
+				suite.True(c.LastLogin.After(timeThreshold) || c.LastLogin.Equal(timeThreshold))
+			}
+		}
+	})
+}
+
+func (suite *RepositorySuite) TestPreservationOfRegistrationDate() {
+	suite.Run("registration date should be preserved", func() {
+		name := "Reg Date Test"
+		email := "regdate@example.com"
+		stage := "registration"
+		isActive := true
+		regDate := time.Now().Add(-30 * 24 * time.Hour)
+
+		// Create client with registration date
+		client1 := client.Entity{
+			Name:             &name,
+			Email:            &email,
+			CurrentStage:     &stage,
+			IsActive:         &isActive,
+			RegistrationDate: &regDate,
+		}
+
+		id := primitive.NewObjectID().Hex()
+		_, err := suite.repository.Update(context.Background(), id, client1)
+		suite.NoError(err)
+
+		// Update client with different registration date
+		newRegDate := time.Now() // This should be ignored
+		client1.RegistrationDate = &newRegDate
+		updatedClient, err := suite.repository.Update(context.Background(), id, client1)
+
+		suite.NoError(err)
+		suite.WithinDuration(regDate, *updatedClient.RegistrationDate, time.Second)
+	})
+}
+
+func (suite *RepositorySuite) TestDefaultLimitBehavior() {
+	suite.Run("zero or negative limit should use default", func() {
+		_, err := suite.testDatabase.DbInstance.Collection("clients").DeleteMany(
+			context.Background(), bson.M{})
+		suite.NoError(err)
+
+		// Create 15 test clients
+		for i := 0; i < 15; i++ {
+			name := fmt.Sprintf("Limit Test %d", i)
+			email := fmt.Sprintf("limit%d@example.com", i)
+			stage := "registration"
+			clientData := client.Entity{
+				Name:         &name,
+				Email:        &email,
+				CurrentStage: &stage,
+			}
+			id := primitive.NewObjectID().Hex()
+			_, err := suite.repository.Update(context.Background(), id, clientData)
+			suite.NoError(err)
+		}
+
+		// Test with zero limit
+		clients, total, err := suite.repository.List(
+			context.Background(), client.Filters{}, 0, 0)
+		suite.NoError(err)
+		suite.Equal(15, total)
+		suite.Equal(10, len(clients)) // Default limit is 10
+
+		// Test with negative limit
+		clients, total, err = suite.repository.List(
+			context.Background(), client.Filters{}, -5, 0)
+		suite.NoError(err)
+		suite.Equal(15, total)
+		suite.Equal(10, len(clients)) // Default limit is 10
+	})
+}
+
+// Helper method to create clients with all fields for testing filters
+func (suite *RepositorySuite) createClientsWithAdditionalFields() {
+	// Client 1 with email channel and app installed
+	name1 := "Filter Test 1"
+	email1 := "filter1@example.com"
+	stage1 := "registration"
+	channel1 := "email"
+	app1 := "installed"
+	isActive1 := true
+	lastLogin1 := time.Now()
+	now := time.Now()
+	client1 := client.Entity{
+		Name:         &name1,
+		Email:        &email1,
+		CurrentStage: &stage1,
+		Channel:      &channel1,
+		App:          &app1,
+		IsActive:     &isActive1,
+		LastUpdated:  &now,
+		LastLogin:    &lastLogin1,
+	}
+
+	// Client 2 with sms channel and app not installed
+	name2 := "Filter Test 2"
+	email2 := "filter2@example.com"
+	stage2 := "active"
+	channel2 := "sms"
+	app2 := "not_installed"
+	isActive2 := true
+	lastLogin2 := time.Now().Add(-24 * time.Hour)
+	now = time.Now().Add(-12 * time.Hour)
+	client2 := client.Entity{
+		Name:         &name2,
+		Email:        &email2,
+		CurrentStage: &stage2,
+		Channel:      &channel2,
+		App:          &app2,
+		IsActive:     &isActive2,
+		LastUpdated:  &now,
+		LastLogin:    &lastLogin2,
+	}
+
+	// Client 3 with email channel and no last login
+	name3 := "Filter Test 3"
+	email3 := "filter3@example.com"
+	stage3 := "completed"
+	channel3 := "email"
+	app3 := "installed"
+	isActive3 := false
+	now = time.Now().Add(-72 * time.Hour)
+	client3 := client.Entity{
+		Name:         &name3,
+		Email:        &email3,
+		CurrentStage: &stage3,
+		Channel:      &channel3,
+		App:          &app3,
+		IsActive:     &isActive3,
+		LastUpdated:  &now,
+	}
+
+	id1 := primitive.NewObjectID().Hex()
+	id2 := primitive.NewObjectID().Hex()
+	id3 := primitive.NewObjectID().Hex()
+
+	_, err1 := suite.repository.Update(context.Background(), id1, client1)
+	_, err2 := suite.repository.Update(context.Background(), id2, client2)
+	_, err3 := suite.repository.Update(context.Background(), id3, client3)
+
+	suite.NoError(err1)
+	suite.NoError(err2)
+	suite.NoError(err3)
+}
 
 func TestClientRepositorySuite(t *testing.T) {
 	suite.Run(t, new(RepositorySuite))

@@ -3,7 +3,6 @@ package config
 import (
 	"os"
 	"path/filepath"
-	"strconv"
 	"time"
 
 	"github.com/joho/godotenv"
@@ -51,16 +50,11 @@ func New() (cfg Configs, err error) {
 	if err != nil {
 		return Configs{}, err
 	}
-	appTimeout, err := strconv.Atoi(os.Getenv("APP_TIMEOUT"))
-	if err != nil {
-		return Configs{}, err
-	}
 
 	cfg.APP = AppConfig{
-		Mode:    os.Getenv("APP_MODE"),
-		Port:    os.Getenv("APP_PORT"),
-		Path:    os.Getenv("APP_PATH"),
-		Timeout: time.Duration(appTimeout),
+		Mode: os.Getenv("APP_MODE"),
+		Port: os.Getenv("APP_PORT"),
+		Path: os.Getenv("APP_PATH"),
 	}
 
 	cfg.Redis = RedisConfig{
