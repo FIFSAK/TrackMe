@@ -76,6 +76,10 @@ jobs:
           sudo curl -L "https://github.com/docker/compose/releases/download/v2.23.3/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
           sudo chmod +x /usr/local/bin/docker-compose
 
+      - name: Create .env file
+        run: |
+          echo "${{ secrets.ENV_FILE }}" > .env
+
       - name: Build and push
         run: |
           DOCKER_USERNAME=${{ secrets.DOCKER_USERNAME }} docker-compose build
