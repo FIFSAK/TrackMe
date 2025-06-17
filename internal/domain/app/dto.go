@@ -28,7 +28,7 @@ func ParseFromEntity(data Entity) Response {
 	highlight := false
 
 	if data.Status == "not_installed" {
-		highlight = false
+		highlight = true
 	}
 	return Response{
 		Status:    data.Status,
