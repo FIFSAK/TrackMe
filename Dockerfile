@@ -14,6 +14,7 @@ FROM alpine:3.18 as hoster
 COPY --from=builder /build/.env ./.env
 COPY --from=builder /build/TrackMe-service ./TrackMe-service
 COPY --from=builder /build/stages.yaml ./stages.yaml
+COPY --from=builder /build/migrations ./migrations
 
 EXPOSE 80
 
