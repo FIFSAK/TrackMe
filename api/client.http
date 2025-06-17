@@ -1,5 +1,5 @@
 ### Add client16 - registration stage
-PUT http://localhost/api/v1/clients/507f1f77bcf86cd799439032/stage
+PUT http://207.154.245.153/api/v1/clients/507f1f77bcf86cd799439032/stage
 Content-Type: application/json
 
 {
@@ -14,7 +14,7 @@ Content-Type: application/json
 }
 
 ### Add client17 - data consent stage
-PUT http://localhost/api/v1/clients/507f1f77bcf86cd799439033/stage
+PUT http://207.154.245.153/api/v1/clients/507f1f77bcf86cd799439033/stage
 Content-Type: application/json
 
 {
@@ -29,7 +29,7 @@ Content-Type: application/json
 }
 
 ### Add client18 - form filling stage
-PUT http://localhost/api/v1/clients/507f1f77bcf86cd799439034/stage
+PUT http://207.154.245.153/api/v1/clients/507f1f77bcf86cd799439034/stage
 Content-Type: application/json
 
 {
@@ -44,7 +44,7 @@ Content-Type: application/json
 }
 
 ### Add client19 - participants specification stage
-PUT http://localhost/api/v1/clients/507f1f77bcf86cd799439035/stage
+PUT http://207.154.245.153/api/v1/clients/507f1f77bcf86cd799439035/stage
 Content-Type: application/json
 
 {
@@ -70,7 +70,7 @@ Content-Type: application/json
 }
 
 ### Add client20 - terms agreement stage
-PUT http://localhost/api/v1/clients/507f1f77bcf86cd799439036/stage
+PUT http://207.154.245.153/api/v1/clients/507f1f77bcf86cd799439036/stage
 Content-Type: application/json
 
 {
@@ -85,7 +85,7 @@ Content-Type: application/json
 }
 
 ### Add client21 - client questionnaire stage
-PUT http://localhost/api/v1/clients/507f1f77bcf86cd799439037/stage
+PUT http://207.154.245.153/api/v1/clients/507f1f77bcf86cd799439037/stage
 Content-Type: application/json
 
 {
@@ -100,7 +100,7 @@ Content-Type: application/json
 }
 
 ### Add client22 - approval waiting stage
-PUT http://localhost/api/v1/clients/507f1f77bcf86cd799439038/stage
+PUT http://207.154.245.153/api/v1/clients/507f1f77bcf86cd799439038/stage
 Content-Type: application/json
 
 {
@@ -115,7 +115,7 @@ Content-Type: application/json
 }
 
 ### Add client23 - modifications stage
-PUT http://localhost/api/v1/clients/507f1f77bcf86cd799439039/stage
+PUT http://207.154.245.153/api/v1/clients/507f1f77bcf86cd799439039/stage
 Content-Type: application/json
 
 {
@@ -130,7 +130,7 @@ Content-Type: application/json
 }
 
 ### Add client24 - document signing stage
-PUT http://localhost/api/v1/clients/507f1f77bcf86cd799439040/stage
+PUT http://207.154.245.153/api/v1/clients/507f1f77bcf86cd799439040/stage
 Content-Type: application/json
 
 {
@@ -145,7 +145,7 @@ Content-Type: application/json
 }
 
 ### Add client25 - payment waiting stage
-PUT http://localhost/api/v1/clients/507f1f77bcf86cd799439041/stage
+PUT http://207.154.245.153/api/v1/clients/507f1f77bcf86cd799439041/stage
 Content-Type: application/json
 
 {
@@ -160,7 +160,7 @@ Content-Type: application/json
 }
 
 ### Move client16 to next stage (registration -> product_selection)
-PUT http://localhost/api/v1/clients/507f1f77bcf86cd799439032/stage
+PUT http://207.154.245.153/api/v1/clients/507f1f77bcf86cd799439032/stage
 Content-Type: application/json
 
 {
@@ -175,7 +175,7 @@ Content-Type: application/json
 }
 
 ### Move client17 to previous stage (data_consent -> product_selection)
-PUT http://localhost/api/v1/clients/507f1f77bcf86cd799439033/stage
+PUT http://207.154.245.153/api/v1/clients/507f1f77bcf86cd799439033/stage
 Content-Type: application/json
 
 {
@@ -190,7 +190,7 @@ Content-Type: application/json
 }
 
 ### Move client18 to next stage (form_filling -> participants_specification)
-PUT http://localhost/api/v1/clients/507f1f77bcf86cd799439034/stage
+PUT http://207.154.245.153/api/v1/clients/507f1f77bcf86cd799439034/stage
 Content-Type: application/json
 
 {
@@ -205,7 +205,7 @@ Content-Type: application/json
 }
 
 ### Move client19 to next stage (participants_specification -> terms_agreement)
-PUT http://localhost/api/v1/clients/507f1f77bcf86cd799439035/stage
+PUT http://207.154.245.153/api/v1/clients/507f1f77bcf86cd799439035/stage
 Content-Type: application/json
 
 {
@@ -214,7 +214,7 @@ Content-Type: application/json
   "email": "owilson@example.com",
   "source": "referral",
   "channel": "friend",
-  "app": "installed",
+  "app": "not_installed",
   "last_login": "2023-06-17T16:10:00Z",
   "contracts": [
     {
@@ -225,13 +225,13 @@ Content-Type: application/json
       "expiration_date": "2026-06-01T12:00:00Z",
       "amount": 10000.00,
       "payment_frequency": "monthly",
-      "autopayment": "disabled"
+      "autopayment": "enabled"
     }
   ]
 }
 
 ### Move client22 to next stage (approval_waiting -> modifications)
-PUT http://localhost/api/v1/clients/507f1f77bcf86cd799439038/stage
+PUT http://207.154.245.153/api/v1/clients/507f1f77bcf86cd799439038/stage
 Content-Type: application/json
 
 {
@@ -241,12 +241,12 @@ Content-Type: application/json
   "source": "search_engine",
   "channel": "bing_ads",
   "app": "installed",
-  "last_login": "2023-06-17T11:45:00Z",
+  "last_login": "2025-06-17T11:45:00Z",
   "contracts": []
 }
 
 ### Move client22 to next stage (approval_waiting -> modifications)
-PUT http://localhost/api/v1/clients/507f1f77bcf86cd799439045/stage
+PUT http://207.154.245.153/api/v1/clients/507f1f77bcf86cd799439045/stage
 Content-Type: application/json
 
 {
@@ -254,7 +254,7 @@ Content-Type: application/json
 }
 
 ### Move client22 to next stage (approval_waiting -> modifications)
-PUT http://localhost/api/v1/clients/507f1f77bcf86cd799439046/stage
+PUT http://207.154.245.153/api/v1/clients/507f1f77bcf86cd799439046/stage
 Content-Type: application/json
 
 {
@@ -262,7 +262,7 @@ Content-Type: application/json
 }
 
 ### Move client22 to next stage (approval_waiting -> modifications)
-PUT http://localhost/api/v1/clients/507f1f77bcf86cd799439090/stage
+PUT http://207.154.245.153/api/v1/clients/507f1f77bcf86cd799439090/stage
 Content-Type: application/json
 
 {

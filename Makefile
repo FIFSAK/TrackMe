@@ -1,10 +1,10 @@
 # Сборка образа Docker
 build:
-	docker build -t TrackMe .
+	docker-compose build
 
 # Запуск контейнеров
 up:
-	docker-compose up -d --build
+	docker-compose up -d
 
 # Остановка и удаление контейнеров
 down:
