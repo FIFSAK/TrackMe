@@ -9,12 +9,13 @@ import (
 	"TrackMe/pkg/store"
 	"context"
 	"errors"
+	"testing"
+	"time"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 	"go.mongodb.org/mongo-driver/bson"
-	"testing"
-	"time"
 )
 
 type MockClientRepository struct {
@@ -26,9 +27,19 @@ func (m *MockClientRepository) Get(ctx context.Context, id string) (client.Entit
 	return args.Get(0).(client.Entity), args.Error(1)
 }
 
+func (m *MockClientRepository) GetByEmail(ctx context.Context, email string) (client.Entity, error) {
+	args := m.Called(ctx, email)
+	return args.Get(0).(client.Entity), args.Error(1)
+}
+
 func (m *MockClientRepository) List(ctx context.Context, filters client.Filters, limit, offset int) ([]client.Entity, int, error) {
 	args := m.Called(ctx, filters, limit, offset)
 	return args.Get(0).([]client.Entity), args.Int(1), args.Error(2)
+}
+
+func (m *MockClientRepository) Create(ctx context.Context, data client.Entity) (client.Entity, error) {
+	args := m.Called(ctx, data)
+	return args.Get(0).(client.Entity), args.Error(1)
 }
 
 func (m *MockClientRepository) Update(ctx context.Context, id string, entity client.Entity) (client.Entity, error) {
@@ -39,6 +50,11 @@ func (m *MockClientRepository) Update(ctx context.Context, id string, entity cli
 func (m *MockClientRepository) Count(ctx context.Context, filter bson.M) (int64, error) {
 	args := m.Called(ctx, filter)
 	return args.Get(0).(int64), args.Error(1)
+}
+
+func (m *MockClientRepository) Delete(ctx context.Context, id string) error {
+	args := m.Called(ctx, id)
+	return args.Error(0)
 }
 
 type MockStageRepository struct {

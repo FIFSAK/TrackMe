@@ -8,14 +8,15 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"github.com/go-chi/chi/v5"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
-	"github.com/stretchr/testify/require"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 )
 
 type MockTrackService struct {
@@ -27,9 +28,19 @@ func (m *MockTrackService) ListClients(ctx context.Context, filters client.Filte
 	return args.Get(0).([]client.Response), args.Int(1), args.Error(2)
 }
 
+func (m *MockTrackService) CreateClient(ctx context.Context, req client.Request) (client.Response, error) {
+	args := m.Called(ctx, req)
+	return args.Get(0).(client.Response), args.Error(1)
+}
+
 func (m *MockTrackService) UpdateClient(ctx context.Context, id string, req client.Request) (client.Response, error) {
 	args := m.Called(ctx, id, req)
 	return args.Get(0).(client.Response), args.Error(1)
+}
+
+func (m *MockTrackService) DeleteClient(ctx context.Context, id string) error {
+	args := m.Called(ctx, id)
+	return args.Error(0)
 }
 
 func TestClientHandler_List(t *testing.T) {
