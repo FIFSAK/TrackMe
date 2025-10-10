@@ -12,6 +12,9 @@ import (
 	"github.com/go-chi/render"
 
 	"TrackMe/internal/domain/client"
+	"TrackMe/internal/domain/user"
+	"TrackMe/pkg/jwt"
+	"TrackMe/pkg/server/middleware"
 	"TrackMe/pkg/server/response"
 	"TrackMe/pkg/store"
 )
@@ -22,24 +25,37 @@ type ClientTrackService interface {
 	UpdateClient(ctx context.Context, id string, req client.Request) (client.Response, error)
 	DeleteClient(ctx context.Context, id string) error
 }
+
 type ClientHandler struct {
 	trackService ClientTrackService
+	tokenManager *jwt.TokenManager
 }
 
-func NewClientHandler(s ClientTrackService) *ClientHandler {
-	return &ClientHandler{trackService: s}
+func NewClientHandler(s ClientTrackService, tm *jwt.TokenManager) *ClientHandler {
+	return &ClientHandler{
+		trackService: s,
+		tokenManager: tm,
+	}
 }
 
 func (h *ClientHandler) Routes() chi.Router {
 	r := chi.NewRouter()
 
-	r.Get("/", h.list)
-	r.Post("/", h.create)
+	// All routes require authentication
+	r.Use(middleware.AuthMiddleware(h.tokenManager))
 
-	r.Route("/{id}", func(r chi.Router) {
-		//r.Get("/", h.get)
-		r.Put("/stage", h.update)
-		r.Delete("/", h.delete)
+	// Manager can only read (list)
+	r.Group(func(r chi.Router) {
+		r.Use(middleware.RequireAdminOrManager())
+		r.Get("/", h.list)
+	})
+
+	// Create, Update, Delete require admin or super_user
+	r.Group(func(r chi.Router) {
+		r.Use(middleware.RequireSuperUserOrAdmin())
+		r.Post("/", h.create)
+		r.Put("/{id}/stage", h.update)
+		r.Delete("/{id}", h.delete)
 	})
 
 	return r
@@ -63,6 +79,7 @@ func (h *ClientHandler) Routes() chi.Router {
 // @Success     200 {array} client.Response
 // @Failure     500 {object} response.Object
 // @Router      /clients [get]
+// @Security BearerAuth
 func (h *ClientHandler) list(w http.ResponseWriter, r *http.Request) {
 	filters := client.Filters{
 		ID:        r.URL.Query().Get("id"),
@@ -133,7 +150,15 @@ func parseBool(s string, defaultVal bool) *bool {
 // @Failure 409 {object} response.Object
 // @Failure 500 {object} response.Object
 // @Router /clients [post]
+// @Security BearerAuth
 func (h *ClientHandler) create(w http.ResponseWriter, r *http.Request) {
+	// Check role - only admin and super_user can create
+	claims, _ := middleware.GetUserFromContext(r.Context())
+	if claims.Role == user.RoleManager {
+		response.Forbidden(w, r, errors.New("managers have read-only access"))
+		return
+	}
+
 	var req client.Request
 	if err := render.Bind(r, &req); err != nil {
 		response.BadRequest(w, r, err, req)
@@ -177,7 +202,15 @@ func (h *ClientHandler) create(w http.ResponseWriter, r *http.Request) {
 // @Failure 404 {object} response.Object
 // @Failure 500 {object} response.Object
 // @Router /clients/{id}/stage [put]
+// @Security BearerAuth
 func (h *ClientHandler) update(w http.ResponseWriter, r *http.Request) {
+	// Check role - only admin and super_user can update
+	claims, _ := middleware.GetUserFromContext(r.Context())
+	if claims.Role == user.RoleManager {
+		response.Forbidden(w, r, errors.New("managers have read-only access"))
+		return
+	}
+
 	id := chi.URLParam(r, "id")
 
 	var req client.Request
@@ -232,7 +265,15 @@ func (h *ClientHandler) update(w http.ResponseWriter, r *http.Request) {
 // @Failure 404 {object} response.Object
 // @Failure 500 {object} response.Object
 // @Router /clients/{id} [delete]
+// @Security BearerAuth
 func (h *ClientHandler) delete(w http.ResponseWriter, r *http.Request) {
+	// Check role - only admin and super_user can delete
+	claims, _ := middleware.GetUserFromContext(r.Context())
+	if claims.Role == user.RoleManager {
+		response.Forbidden(w, r, errors.New("managers have read-only access"))
+		return
+	}
+
 	id := chi.URLParam(r, "id")
 
 	err := h.trackService.DeleteClient(r.Context(), id)

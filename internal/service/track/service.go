@@ -5,6 +5,7 @@ import (
 	"TrackMe/internal/domain/metric"
 	"TrackMe/internal/domain/prometheus"
 	"TrackMe/internal/domain/stage"
+	"TrackMe/internal/domain/user"
 )
 
 // Configuration is an alias for a function that will take in a pointer to a Service and modify it
@@ -14,6 +15,7 @@ type Configuration func(s *Service) error
 type Service struct {
 	PrometheusMetrics prometheus.Entity
 	clientRepository  client.Repository
+	userRepository    user.Repository
 	StageRepository   stage.Repository
 	MetricRepository  metric.Repository
 	MetricCache       metric.Cache
@@ -86,6 +88,14 @@ func WithMetricCache(metricCache metric.Cache) Configuration {
 	// You need to return this so that the parent function can take in all the needed parameters
 	return func(s *Service) error {
 		s.MetricCache = metricCache
+		return nil
+	}
+}
+
+// WithUserRepository applies a given user repository to the Service
+func WithUserRepository(userRepository user.Repository) Configuration {
+	return func(s *Service) error {
+		s.userRepository = userRepository
 		return nil
 	}
 }

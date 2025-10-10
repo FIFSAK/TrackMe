@@ -4,6 +4,7 @@ import (
 	"TrackMe/internal/domain/client"
 	"TrackMe/internal/domain/metric"
 	"TrackMe/internal/domain/stage"
+	"TrackMe/internal/domain/user"
 	"TrackMe/internal/repository/memory"
 	"TrackMe/internal/repository/mongo"
 	"TrackMe/pkg/store"
@@ -19,6 +20,7 @@ type Repository struct {
 	postgres store.SQLX
 	Stage    stage.Repository
 	Client   client.Repository
+	User     user.Repository
 	Metric   metric.Repository
 }
 
@@ -78,6 +80,8 @@ func WithMongoStore(uri, name string) Configuration {
 		database := s.mongo.Client.Database(name)
 
 		s.Client = mongo.NewClientRepository(database)
+
+		s.User = mongo.NewUserRepository(database)
 
 		s.Metric = mongo.NewMetricRepository(database)
 

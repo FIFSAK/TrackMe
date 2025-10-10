@@ -67,3 +67,21 @@ func InternalServerError(w http.ResponseWriter, r *http.Request, err error) {
 	}
 	render.JSON(w, r, v)
 }
+
+func Unauthorized(w http.ResponseWriter, r *http.Request, err error) {
+	render.Status(r, http.StatusUnauthorized)
+
+	v := Object{
+		Message: err.Error(),
+	}
+	render.JSON(w, r, v)
+}
+
+func Forbidden(w http.ResponseWriter, r *http.Request, err error) {
+	render.Status(r, http.StatusForbidden)
+
+	v := Object{
+		Message: err.Error(),
+	}
+	render.JSON(w, r, v)
+}

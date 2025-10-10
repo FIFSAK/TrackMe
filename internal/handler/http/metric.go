@@ -2,6 +2,8 @@ package http
 
 import (
 	"TrackMe/internal/domain/metric"
+	"TrackMe/pkg/jwt"
+	"TrackMe/pkg/server/middleware"
 	"TrackMe/pkg/server/response"
 	"TrackMe/pkg/store"
 	"context"
@@ -18,24 +20,28 @@ type metricTrackService interface {
 
 type MetricHandler struct {
 	trackService metricTrackService
+	tokenManager *jwt.TokenManager
 }
 
-func NewMetricHandler(s metricTrackService) *MetricHandler {
-	return &MetricHandler{trackService: s}
-}
-
-// For testing, use the mock directly
-func createTestMetricHandler(m metricTrackService) *MetricHandler {
+func NewMetricHandler(s metricTrackService, tm *jwt.TokenManager) *MetricHandler {
 	return &MetricHandler{
-		trackService: m,
+		trackService: s,
+		tokenManager: tm,
 	}
 }
 
 func (h *MetricHandler) Routes() chi.Router {
 	r := chi.NewRouter()
 
+	// All routes require authentication
+	r.Use(middleware.AuthMiddleware(h.tokenManager))
+
+	// All authenticated users (including managers) can view metrics (read-only)
+	r.Use(middleware.RequireAdminOrManager())
+
 	r.Get("/", h.list)
 	r.Get("/calculate", h.triggerCalculateAllMetrics)
+
 	return r
 }
 
@@ -49,6 +55,7 @@ func (h *MetricHandler) Routes() chi.Router {
 // @Failure 400 {object} response.Object
 // @Failure 500 {object} response.Object
 // @Router /metrics [get]
+// @Security BearerAuth
 func (h *MetricHandler) list(w http.ResponseWriter, r *http.Request) {
 	filters := metric.Filters{
 		Type:     r.URL.Query().Get("type"),

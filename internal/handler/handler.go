@@ -9,8 +9,8 @@ import (
 	"TrackMe/docs"
 	"TrackMe/internal/config"
 	"TrackMe/internal/handler/http"
-
 	"TrackMe/internal/service/track"
+	"TrackMe/pkg/jwt"
 	"TrackMe/pkg/server/router"
 )
 
@@ -62,12 +62,19 @@ func WithHTTPHandler() Configuration {
 		docs.SwaggerInfo.BasePath = h.dependencies.Configs.APP.Path
 		h.HTTP.Get("/swagger/*", httpSwagger.WrapHandler)
 
+		// Create JWT token manager
+		tokenManager := jwt.NewTokenManager(h.dependencies.Configs.JWT.SecretKey)
+
 		// Init service handlers
-		clientHandler := http.NewClientHandler(h.dependencies.TrackService)
-		metricHandler := http.NewMetricHandler(h.dependencies.TrackService)
+		authHandler := http.NewAuthHandler(h.dependencies.TrackService, tokenManager)
+		clientHandler := http.NewClientHandler(h.dependencies.TrackService, tokenManager)
+		userHandler := http.NewUserHandler(h.dependencies.TrackService, tokenManager)
+		metricHandler := http.NewMetricHandler(h.dependencies.TrackService, tokenManager)
 
 		h.HTTP.Route(basePath+"/", func(r chi.Router) {
+			r.Mount("/auth", authHandler.Routes())
 			r.Mount("/clients", clientHandler.Routes())
+			r.Mount("/users", userHandler.Routes())
 			r.Mount("/metrics", metricHandler.Routes())
 		})
 		h.HTTP.Handle("/metrics", promhttp.Handler())

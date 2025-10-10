@@ -15,6 +15,7 @@ type (
 		CURRENCY ClientConfig
 		MONGO    StoreConfig
 		Redis    RedisConfig
+		JWT      JWTConfig
 	}
 
 	AppConfig struct {
@@ -36,6 +37,10 @@ type (
 
 	RedisConfig struct {
 		URL string
+	}
+
+	JWTConfig struct {
+		SecretKey string `envconfig:"JWT_SECRET_KEY" default:"your-secret-key-change-in-production"`
 	}
 )
 

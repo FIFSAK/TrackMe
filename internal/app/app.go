@@ -14,11 +14,12 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	_ "go.mongodb.org/mongo-driver/bson"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
+
+	_ "go.mongodb.org/mongo-driver/bson"
 )
 
 // Run initializes whole application
@@ -57,7 +58,12 @@ func Run() {
 	defer caches.Close()
 
 	trackService, err := track.New(
-		track.WithClientRepository(repositories.Client), track.WithStageRepository(repositories.Stage), track.WithMetricRepository(repositories.Metric), track.WithPrometheusMetrics(promMetrics), track.WithMetricCache(caches.Metric))
+		track.WithClientRepository(repositories.Client),
+		track.WithUserRepository(repositories.User),
+		track.WithStageRepository(repositories.Stage),
+		track.WithMetricRepository(repositories.Metric),
+		track.WithPrometheusMetrics(promMetrics),
+		track.WithMetricCache(caches.Metric))
 	if err != nil {
 		logger.Error().Err(err).Msg("ERR_INIT_LIBRARY_SERVICE")
 		return
