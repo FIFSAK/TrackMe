@@ -24,7 +24,7 @@ services:
     image: mongo:latest
     container_name: trackme-mongo
     ports:
-      - "27017:27017"
+      - "27018:27018"
     environment:
       - MONGO_INITDB_ROOT_USERNAME=${MONGO_USERNAME}
       - MONGO_INITDB_ROOT_PASSWORD=${MONGO_PASSWORD}
@@ -49,7 +49,7 @@ services:
     image: prom/prometheus:latest
     container_name: trackme-prometheus
     volumes:
-      - /trackme/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
       - prometheus_data:/prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'

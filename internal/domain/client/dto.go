@@ -6,6 +6,7 @@ import (
 	"TrackMe/internal/domain/lastLogin"
 	"errors"
 	"net/http"
+	"regexp"
 	"time"
 )
 
@@ -35,6 +36,14 @@ type Request struct {
 func (s *Request) Bind(r *http.Request) error {
 	if s.Stage == "" {
 		return errors.New("current_stage: cannot be blank")
+	}
+	if s.Email == "" {
+		return errors.New("email: cannot be blank")
+	}
+	// Validate email format
+	emailRegex := regexp.MustCompile(`^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`)
+	if !emailRegex.MatchString(s.Email) {
+		return errors.New("email: invalid format")
 	}
 	return nil
 }

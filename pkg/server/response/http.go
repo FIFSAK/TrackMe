@@ -50,6 +50,15 @@ func NotFound(w http.ResponseWriter, r *http.Request, err error) {
 	render.JSON(w, r, v)
 }
 
+func Conflict(w http.ResponseWriter, r *http.Request, err error) {
+	render.Status(r, http.StatusConflict)
+
+	v := Object{
+		Message: err.Error(),
+	}
+	render.JSON(w, r, v)
+}
+
 func InternalServerError(w http.ResponseWriter, r *http.Request, err error) {
 	render.Status(r, http.StatusInternalServerError)
 

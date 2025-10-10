@@ -18,7 +18,9 @@ import (
 
 type ClientTrackService interface {
 	ListClients(ctx context.Context, filters client.Filters, limit, offset int) ([]client.Response, int, error)
+	CreateClient(ctx context.Context, req client.Request) (client.Response, error)
 	UpdateClient(ctx context.Context, id string, req client.Request) (client.Response, error)
+	DeleteClient(ctx context.Context, id string) error
 }
 type ClientHandler struct {
 	trackService ClientTrackService
@@ -32,12 +34,12 @@ func (h *ClientHandler) Routes() chi.Router {
 	r := chi.NewRouter()
 
 	r.Get("/", h.list)
-	//r.Post("/", h.add)
+	r.Post("/", h.create)
 
 	r.Route("/{id}", func(r chi.Router) {
 		//r.Get("/", h.get)
 		r.Put("/stage", h.update)
-		//r.Delete("/", h.delete)
+		r.Delete("/", h.delete)
 	})
 
 	return r
@@ -121,6 +123,48 @@ func parseBool(s string, defaultVal bool) *bool {
 	return &b
 }
 
+// @Summary Create client
+// @Tags clients
+// @Accept json
+// @Produce json
+// @Param request body client.Request true "body param"
+// @Success 201 {object} client.Response
+// @Failure 400 {object} response.Object
+// @Failure 409 {object} response.Object
+// @Failure 500 {object} response.Object
+// @Router /clients [post]
+func (h *ClientHandler) create(w http.ResponseWriter, r *http.Request) {
+	var req client.Request
+	if err := render.Bind(r, &req); err != nil {
+		response.BadRequest(w, r, err, req)
+		return
+	}
+	if len(req.Contracts) > 0 {
+		for _, contract := range req.Contracts {
+			if err := contract.Bind(r); err != nil {
+				response.BadRequest(w, r, err, req)
+				return
+			}
+		}
+	}
+
+	clientResp, err := h.trackService.CreateClient(r.Context(), req)
+	if err != nil {
+		if strings.Contains(err.Error(), "already exists") {
+			response.Conflict(w, r, err)
+			return
+		}
+		if strings.Contains(err.Error(), "invalid initial stage") {
+			response.BadRequest(w, r, err, req.Stage)
+			return
+		}
+		response.InternalServerError(w, r, err)
+		return
+	}
+
+	response.Created(w, r, clientResp)
+}
+
 // @Summary Update client
 // @Tags clients
 // @Accept json
@@ -177,4 +221,29 @@ func (h *ClientHandler) update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	response.OK(w, r, clientResp, nil)
+}
+
+// @Summary Delete client
+// @Tags clients
+// @Accept json
+// @Produce json
+// @Param id path string true "Client ID"
+// @Success 204 "No Content"
+// @Failure 404 {object} response.Object
+// @Failure 500 {object} response.Object
+// @Router /clients/{id} [delete]
+func (h *ClientHandler) delete(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+
+	err := h.trackService.DeleteClient(r.Context(), id)
+	if err != nil {
+		if errors.Is(err, store.ErrorNotFound) {
+			response.NotFound(w, r, err)
+			return
+		}
+		response.InternalServerError(w, r, err)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }

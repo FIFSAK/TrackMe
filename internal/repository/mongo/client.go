@@ -6,6 +6,7 @@ import (
 	"TrackMe/pkg/store"
 	"context"
 	"errors"
+
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -96,18 +97,42 @@ func (r *ClientRepository) List(ctx context.Context, filters client.Filters, lim
 	return clients, int(total), nil
 }
 
+// Create inserts a new client into the database.
+func (r *ClientRepository) Create(ctx context.Context, data client.Entity) (client.Entity, error) {
+	result, err := r.db.InsertOne(ctx, data)
+	if err != nil {
+		return client.Entity{}, err
+	}
+
+	data.ID = result.InsertedID.(primitive.ObjectID).Hex()
+	return data, nil
+}
+
 // Get retrieves a client by ID from the database.
 func (r *ClientRepository) Get(ctx context.Context, id string) (client.Entity, error) {
 	objID, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
 		return client.Entity{}, err
 	}
-	var client client.Entity
-	err = r.db.FindOne(ctx, bson.M{"_id": objID}).Decode(&client)
+	var clientEntity client.Entity
+	err = r.db.FindOne(ctx, bson.M{"_id": objID}).Decode(&clientEntity)
 	if err != nil && errors.Is(err, mongo.ErrNoDocuments) {
-		return client, store.ErrorNotFound
+		return clientEntity, store.ErrorNotFound
 	}
-	return client, err
+	return clientEntity, err
+}
+
+// GetByEmail retrieves a client by email from the database.
+func (r *ClientRepository) GetByEmail(ctx context.Context, email string) (client.Entity, error) {
+	var clientEntity client.Entity
+	err := r.db.FindOne(ctx, bson.M{"email": email}).Decode(&clientEntity)
+	if err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return clientEntity, store.ErrorNotFound
+		}
+		return clientEntity, err
+	}
+	return clientEntity, nil
 }
 
 // Update modifies an existing client in the database.
@@ -130,11 +155,9 @@ func (r *ClientRepository) Update(ctx context.Context, id string, data client.En
 			"last_login":    data.LastLogin,
 			"contracts":     data.Contracts,
 		},
-		"$setOnInsert": bson.M{"registration_date": data.RegistrationDate},
 	}
 
 	opts := options.FindOneAndUpdate().
-		SetUpsert(true).
 		SetReturnDocument(options.After)
 
 	var updated client.Entity
@@ -146,6 +169,9 @@ func (r *ClientRepository) Update(ctx context.Context, id string, data client.En
 	).Decode(&updated)
 
 	if err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return client.Entity{}, store.ErrorNotFound
+		}
 		return client.Entity{}, err
 	}
 
@@ -154,4 +180,23 @@ func (r *ClientRepository) Update(ctx context.Context, id string, data client.En
 
 func (r *ClientRepository) Count(ctx context.Context, filter bson.M) (int64, error) {
 	return r.db.CountDocuments(ctx, filter)
+}
+
+// Delete removes a client from the database.
+func (r *ClientRepository) Delete(ctx context.Context, id string) error {
+	objID, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		return err
+	}
+
+	result, err := r.db.DeleteOne(ctx, bson.M{"_id": objID})
+	if err != nil {
+		return err
+	}
+
+	if result.DeletedCount == 0 {
+		return store.ErrorNotFound
+	}
+
+	return nil
 }
