@@ -513,6 +513,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/response.Object'
+      security:
+      - BearerAuth: []
       summary: List users with pagination
       tags:
       - users
@@ -602,6 +604,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/response.Object'
+      security:
+      - BearerAuth: []
       summary: Get user by ID
       tags:
       - users

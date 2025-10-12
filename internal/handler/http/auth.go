@@ -57,12 +57,12 @@ func (h *AuthHandler) register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Convert to user.Request
+	// Convert to user.Request and force default role to manager regardless of input
 	userReq := user.Request{
 		Name:     req.Name,
 		Email:    req.Email,
 		Password: req.Password,
-		Role:     req.Role,
+		Role:     user.RoleManager,
 	}
 
 	// Create user

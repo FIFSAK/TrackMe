@@ -2,6 +2,7 @@ package http
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"strconv"
@@ -53,25 +54,31 @@ func (h *UserHandler) Routes() chi.Router {
 	r.Group(func(r chi.Router) {
 		r.Use(middleware.RequireSuperUserOrAdmin())
 		r.Post("/", h.create)
+
+	})
+
+	r.Group(func(r chi.Router) {
+		r.Use(middleware.RequireSuperUser())
 		r.Delete("/{id}", h.delete)
+		r.Put("/{id}", h.update)
 	})
 
 	// Update has special logic in handler
-	r.Put("/{id}", h.update)
 
 	return r
 }
 
-// @Summary    List users with pagination
+// @Summary List users with pagination
 // @Description Get a list of users with optional pagination
-// @Tags        users
-// @Accept      json
-// @Produce     json
-// @Param       limit query integer false "Pagination limit (default 50)"
-// @Param       offset query integer false "Pagination offset (default 0)"
-// @Success     200 {array} user.Response
-// @Failure     500 {object} response.Object
-// @Router      /users [get]
+// @Tags users
+// @Accept json
+// @Produce json
+// @Param limit query integer false "Pagination limit (default 50)"
+// @Param offset query integer false "Pagination offset (default 0)"
+// @Success 200 {array} user.Response
+// @Failure 500 {object} response.Object
+// @Router /users [get]
+// @Security BearerAuth
 func (h *UserHandler) list(w http.ResponseWriter, r *http.Request) {
 	limit := 50
 	if l := r.URL.Query().Get("limit"); l != "" {
@@ -112,8 +119,27 @@ func (h *UserHandler) list(w http.ResponseWriter, r *http.Request) {
 // @Router /users [post]
 // @Security BearerAuth
 func (h *UserHandler) create(w http.ResponseWriter, r *http.Request) {
-	var req user.Request
-	if err := render.Bind(r, &req); err != nil {
+	// Decode only the allowed fields from the client
+	var payload struct {
+		Name     string `json:"name"`
+		Email    string `json:"email"`
+		Password string `json:"password"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		response.BadRequest(w, r, err, nil)
+		return
+	}
+
+	// Always create users with manager role
+	req := user.Request{
+		Name:     payload.Name,
+		Email:    payload.Email,
+		Password: payload.Password,
+		Role:     user.RoleManager,
+	}
+
+	// Reuse existing validation
+	if err := req.Bind(r); err != nil {
 		response.BadRequest(w, r, err, req)
 		return
 	}
@@ -144,6 +170,7 @@ func (h *UserHandler) create(w http.ResponseWriter, r *http.Request) {
 // @Failure 404 {object} response.Object
 // @Failure 500 {object} response.Object
 // @Router /users/{id} [get]
+// @Security BearerAuth
 func (h *UserHandler) get(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 
