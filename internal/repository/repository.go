@@ -5,6 +5,7 @@ import (
 	"TrackMe/internal/domain/metric"
 	"TrackMe/internal/domain/stage"
 	"TrackMe/internal/domain/user"
+	clickhouse "TrackMe/internal/repository/click_house"
 	"TrackMe/internal/repository/memory"
 	"TrackMe/internal/repository/mongo"
 	"TrackMe/pkg/store"
@@ -16,12 +17,13 @@ type Configuration func(r *Repository) error
 
 // Repository is an implementation of the Repository
 type Repository struct {
-	mongo    store.Mongo
-	postgres store.SQLX
-	Stage    stage.Repository
-	Client   client.Repository
-	User     user.Repository
-	Metric   metric.Repository
+	clickhouse store.ClickHouse
+	mongo      store.Mongo
+	postgres   store.SQLX
+	Stage      stage.Repository
+	Client     client.Repository
+	User       user.Repository
+	Metric     metric.Repository
 }
 
 // New takes a variable amount of Configuration functions and returns a new Repository
@@ -86,5 +88,22 @@ func WithMongoStore(uri, name string) Configuration {
 		s.Metric = mongo.NewMetricRepository(database)
 
 		return
+	}
+}
+
+// WithClickHouseStore sets ClickHouse repositories
+func WithClickHouseStore(dsn string) Configuration {
+	return func(s *Repository) (err error) {
+		s.clickhouse, err = store.NewClickHouse()
+		if err != nil {
+			return err
+		}
+
+		// pass the inner Conn
+		s.Client = clickhouse.NewClientRepository(s.clickhouse.Conn)
+		s.User = clickhouse.NewUserRepository(s.clickhouse.Conn)
+		s.Metric = clickhouse.NewMetricRepository(s.clickhouse.Conn)
+
+		return nil
 	}
 }

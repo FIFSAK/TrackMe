@@ -11,11 +11,12 @@ import (
 
 type (
 	Configs struct {
-		APP      AppConfig
-		CURRENCY ClientConfig
-		MONGO    StoreConfig
-		Redis    RedisConfig
-		JWT      JWTConfig
+		APP        AppConfig
+		CURRENCY   ClientConfig
+		MONGO      StoreConfig
+		CLICKHOUSE StoreConfig
+		Redis      RedisConfig
+		JWT        JWTConfig
 	}
 
 	AppConfig struct {
@@ -68,6 +69,10 @@ func New() (cfg Configs, err error) {
 
 	cfg.MONGO = StoreConfig{
 		DSN: os.Getenv("MONGO_DSN"),
+	}
+
+	cfg.CLICKHOUSE = StoreConfig{
+		DSN: os.Getenv("CLICKHOUSE_DSN"),
 	}
 
 	if err = envconfig.Process("APP", &cfg.APP); err != nil {
