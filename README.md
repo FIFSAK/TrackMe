@@ -1,4 +1,4 @@
-#Open questions
+# Open questions
 
 Как выбор структуры базы данных (SQL или NoSQL) влияет на дизайн CRUD API? `в SQL строгая схема базы данных также API должен учитывать связи между таблицами нужны валидации данных. NoSQL удобен на ранних стадиях когда еще не сформировалась точная структура `
 
@@ -341,6 +341,7 @@ annotations do not live in `main.go`, you can let swag know with `-g` flag.
   swag fmt
 
   ```
+
 
 
 
