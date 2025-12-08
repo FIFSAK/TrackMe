@@ -8,6 +8,7 @@ import (
 	clickhouse "TrackMe/internal/repository/click_house"
 	"TrackMe/internal/repository/memory"
 	"TrackMe/internal/repository/mongo"
+	"TrackMe/internal/repository/postgres"
 	"TrackMe/pkg/store"
 	"context"
 )
@@ -85,7 +86,7 @@ func WithMongoStore(uri, name string) Configuration {
 
 		s.User = mongo.NewUserRepository(database)
 
-		s.Metric = mongo.NewMetricRepository(database)
+		// s.Metric = mongo.NewMetricRepository(database)
 
 		return
 	}
@@ -100,9 +101,26 @@ func WithClickHouseStore(dsn string) Configuration {
 		}
 
 		// pass the inner Conn
-		s.Client = clickhouse.NewClientRepository(s.clickhouse.Conn)
-		s.User = clickhouse.NewUserRepository(s.clickhouse.Conn)
+		// s.Client = clickhouse.NewClientRepository(s.clickhouse.Conn)
+		// s.User = clickhouse.NewUserRepository(s.clickhouse.Conn)
 		s.Metric = clickhouse.NewMetricRepository(s.clickhouse.Conn)
+
+		return nil
+	}
+}
+
+func WithPostgresStore(dsn string) Configuration {
+	return func(s *Repository) error {
+		// Create PostgreSQL connection with sqlx
+		db, err := store.NewPostgres(dsn) // returns SQLX struct with db *sqlx.DB
+		if err != nil {
+			return err
+		}
+		s.postgres = db
+
+		// Initialize repositories
+		s.Client = postgres.NewClientRepository(s.postgres.Client) // *sqlx.DB
+		s.User = postgres.NewUserRepository(s.postgres.Client)
 
 		return nil
 	}

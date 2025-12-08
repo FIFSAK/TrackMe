@@ -15,6 +15,7 @@ type (
 		CURRENCY   ClientConfig
 		MONGO      StoreConfig
 		CLICKHOUSE StoreConfig
+		POSTGRES   StoreConfig
 		Redis      RedisConfig
 		JWT        JWTConfig
 	}
@@ -73,6 +74,10 @@ func New() (cfg Configs, err error) {
 
 	cfg.CLICKHOUSE = StoreConfig{
 		DSN: os.Getenv("CLICKHOUSE_DSN"),
+	}
+
+	cfg.POSTGRES = StoreConfig{
+		DSN: os.Getenv("POSTGRES_DSN"),
 	}
 
 	if err = envconfig.Process("APP", &cfg.APP); err != nil {

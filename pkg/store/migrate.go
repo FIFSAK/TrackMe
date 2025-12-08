@@ -2,16 +2,19 @@ package store
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"strings"
 
 	"github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/golang-migrate/migrate/v4"
-	_ "github.com/golang-migrate/migrate/v4/database/mongodb"
+	"github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
+	_ "github.com/lib/pq"
 )
 
+// Migrate runs migrations for MongoDB, Postgres, etc. based on the dataSourceName
 func Migrate(dataSourceName string) (err error) {
 	if !strings.Contains(dataSourceName, "://") {
 		err = errors.New("store: undefined data source name " + dataSourceName)
@@ -44,7 +47,7 @@ func MigrateClickHouse(ctx context.Context, conn clickhouse.Conn) error {
 			email String,
 			password String,
 			role String,
-			created_at DateTime ,
+			created_at DateTime,
 			updated_at DateTime
 		) ENGINE = ReplacingMergeTree(updated_at)
 		ORDER BY id`,
@@ -80,5 +83,37 @@ func MigrateClickHouse(ctx context.Context, conn clickhouse.Conn) error {
 	}
 
 	fmt.Println("ClickHouse migration completed")
+	return nil
+}
+
+// MigratePostgres runs migrations for PostgreSQL
+func MigratePostgres(dsn string, migrationsPath string) error {
+	// Connect using database/sql
+	db, err := sql.Open("postgres", dsn)
+	if err != nil {
+		return fmt.Errorf("failed to open postgres connection: %w", err)
+	}
+	defer db.Close()
+
+	driver, err := postgres.WithInstance(db, &postgres.Config{})
+	if err != nil {
+		return fmt.Errorf("failed to create postgres driver: %w", err)
+	}
+
+	m, err := migrate.NewWithDatabaseInstance(
+		migrationsPath, // e.g. "file://migrations/postgres"
+		"postgres",
+		driver,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to create migrate instance: %w", err)
+	}
+
+	// Apply migrations
+	if err := m.Up(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
+		return fmt.Errorf("failed to apply migrations: %w", err)
+	}
+
+	fmt.Println("PostgreSQL migration completed")
 	return nil
 }

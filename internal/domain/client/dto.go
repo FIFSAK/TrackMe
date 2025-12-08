@@ -65,38 +65,77 @@ type Response struct {
 }
 
 // ParseFromEntity converts a client entity to a response payload.
+// ParseFromEntity converts a client entity to a response payload.
 func ParseFromEntity(data Entity) Response {
-	parsedRegistrationDate := data.RegistrationDate.Format(time.RFC3339)
+	// Initialize response with safe defaults
+	resp := Response{
+		ID: data.ID,
+	}
 
+	// Handle RegistrationDate safely
+	if data.RegistrationDate != nil {
+		parsedRegistrationDate := data.RegistrationDate.Format(time.RFC3339)
+
+		// Check if App is installed to format differently
+		if data.App != nil && *data.App == "installed" {
+			parsedRegistrationDate = data.RegistrationDate.UTC().Format("02.01.2006")
+		}
+		resp.RegistrationDate = parsedRegistrationDate
+	}
+
+	// Handle App safely
 	var appEntity app.Entity
 	if data.App != nil {
 		appEntity = app.Entity{Status: *data.App}
-		if *data.App == "installed" {
-			parsedRegistrationDate = data.RegistrationDate.UTC().Format("02.01.2006")
-		}
 	}
+	resp.App = app.ParseFromEntity(appEntity)
 
+	// Handle LastLogin safely
 	var lastLoginEntity lastLogin.Entity
 	if data.LastLogin != nil {
 		lastLoginEntity = lastLogin.Entity{
 			Date: *data.LastLogin,
 		}
 	}
+	resp.LastLogin = lastLogin.ParseFromEntity(lastLoginEntity)
 
-	return Response{
-		ID:               data.ID,
-		Name:             *data.Name,
-		Email:            *data.Email,
-		CurrentStage:     *data.CurrentStage,
-		RegistrationDate: parsedRegistrationDate,
-		LastUpdated:      *data.LastUpdated,
-		IsActive:         *data.IsActive,
-		Source:           *data.Source,
-		Channel:          *data.Channel,
-		App:              app.ParseFromEntity(appEntity),
-		LastLogin:        lastLogin.ParseFromEntity(lastLoginEntity),
-		Contracts:        contract.ParseFromEntities(data.Contracts),
+	// Handle Contracts
+	resp.Contracts = contract.ParseFromEntities(data.Contracts)
+
+	// Safely dereference pointer fields with nil checks
+	if data.Name != nil {
+		resp.Name = *data.Name
 	}
+
+	if data.Email != nil {
+		resp.Email = *data.Email
+	}
+
+	if data.CurrentStage != nil {
+		resp.CurrentStage = *data.CurrentStage
+	}
+
+	// FIX: This was causing the panic - add nil check for LastUpdated
+	if data.LastUpdated != nil {
+		resp.LastUpdated = *data.LastUpdated
+	} else {
+		// Set default value if nil
+		resp.LastUpdated = time.Now()
+	}
+
+	if data.IsActive != nil {
+		resp.IsActive = *data.IsActive
+	}
+
+	if data.Source != nil {
+		resp.Source = *data.Source
+	}
+
+	if data.Channel != nil {
+		resp.Channel = *data.Channel
+	}
+
+	return resp
 }
 
 // ParseFromEntities converts a list of client entities to a list of response payloads.
