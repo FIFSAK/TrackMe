@@ -90,9 +90,9 @@ func WithMongoStore(uri, name string) Configuration {
 }
 
 // WithClickHouseStore sets ClickHouse repositories
-func WithClickHouseStore(dsn string) Configuration {
+func WithClickHouseStore(addr, userName, password, db string) Configuration {
 	return func(s *Repository) (err error) {
-		s.clickhouse, err = store.NewClickHouse()
+		s.clickhouse, err = store.NewClickHouse(addr, userName, password, db)
 		if err != nil {
 			return err
 		}

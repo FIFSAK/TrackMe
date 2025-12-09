@@ -14,7 +14,7 @@ type (
 		APP        AppConfig
 		CURRENCY   ClientConfig
 		MONGO      StoreConfig
-		CLICKHOUSE StoreConfig
+		CLICKHOUSE ClickhouseConfig
 		POSTGRES   StoreConfig
 		Redis      RedisConfig
 		JWT        JWTConfig
@@ -35,6 +35,13 @@ type (
 
 	StoreConfig struct {
 		DSN string
+	}
+
+	ClickhouseConfig struct {
+		ADDR     string
+		UserName string
+		Password string
+		DB       string
 	}
 
 	RedisConfig struct {
@@ -72,8 +79,11 @@ func New() (cfg Configs, err error) {
 		DSN: os.Getenv("MONGO_DSN"),
 	}
 
-	cfg.CLICKHOUSE = StoreConfig{
-		DSN: os.Getenv("CLICKHOUSE_DSN"),
+	cfg.CLICKHOUSE = ClickhouseConfig{
+		ADDR:     os.Getenv("CLICKHOUSE_ADDR"),
+		UserName: os.Getenv("CLICKHOUSE_USERNAME"),
+		Password: os.Getenv("CLICKHOUSE_PASSWORD"),
+		DB:       os.Getenv("CLICKHOUSE_DB"),
 	}
 
 	cfg.POSTGRES = StoreConfig{

@@ -50,7 +50,7 @@ func Run() {
 		// repository.WithMongoStore(configs.MONGO.DSN, "trackme"),
 		repository.WithPostgresStore(configs.POSTGRES.DSN),
 		repository.WithMemoryStore(),
-		repository.WithClickHouseStore(configs.CLICKHOUSE.DSN),
+		repository.WithClickHouseStore(configs.CLICKHOUSE.ADDR, configs.CLICKHOUSE.UserName, configs.CLICKHOUSE.Password, configs.CLICKHOUSE.DB),
 	)
 
 	if err != nil {

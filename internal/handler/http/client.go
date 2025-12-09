@@ -46,7 +46,6 @@ func (h *ClientHandler) Routes() chi.Router {
 
 	// Manager can only read (list)
 	r.Group(func(r chi.Router) {
-		r.Use(middleware.RequireAdminOrManager())
 		r.Get("/", h.list)
 	})
 

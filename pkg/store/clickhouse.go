@@ -2,7 +2,6 @@ package store
 
 import (
 	"context"
-	"crypto/tls"
 	"fmt"
 
 	"github.com/ClickHouse/clickhouse-go/v2"
@@ -13,18 +12,23 @@ type ClickHouse struct {
 }
 
 // NewClickHouse connects to ClickHouse and returns a store.ClickHouse
-func NewClickHouse() (ClickHouse, error) {
+func NewClickHouse(addr, userName, password, db string) (ClickHouse, error) {
 	conn, err := clickhouse.Open(&clickhouse.Options{
-		Addr: []string{"qipzxoq7h7.europe-west4.gcp.clickhouse.cloud:9440"},
+		Addr: []string{addr},
 		Auth: clickhouse.Auth{
-			Username: "default",
-			Password: "Vvo87NNck_O~D",
+			Database: db,
+			Username: userName,
+			Password: password,
 		},
 		Protocol: clickhouse.Native,
-		TLS:      &tls.Config{},
+		TLS:      nil,
 	})
 	if err != nil {
 		return ClickHouse{}, err
+	}
+
+	if err := conn.Ping(context.Background()); err != nil {
+		return ClickHouse{}, fmt.Errorf("failed to ping clickhouse: %w", err)
 	}
 
 	// Run migration right after connection
