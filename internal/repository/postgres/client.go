@@ -5,30 +5,28 @@ import (
 	"TrackMe/internal/domain/contract"
 	"TrackMe/pkg/store"
 	"context"
-	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
 
-	"github.com/google/uuid"
-	"github.com/jmoiron/sqlx"
-	"github.com/lib/pq"
 	"go.mongodb.org/mongo-driver/bson"
+
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// ClientEntity is a local struct that embeds client.Entity and adds JSON handling
+// ClientEntity wraps client.Entity and holds raw JSON contracts
 type ClientEntity struct {
 	client.Entity
-	ContractsRaw json.RawMessage `db:"contracts"`
+	ContractsRaw []byte
 }
 
-// ClientRepository handles CRUD operations for client in a PostgreSQL database.
 type ClientRepository struct {
-	db *sqlx.DB
+	db *pgxpool.Pool
 }
 
-// NewClientRepository creates a new ClientRepository.
-func NewClientRepository(db *sqlx.DB) *ClientRepository {
+func NewClientRepository(db *pgxpool.Pool) *ClientRepository {
 	return &ClientRepository{db: db}
 }
 
@@ -99,9 +97,8 @@ func (r *ClientRepository) List(ctx context.Context, filters client.Filters, lim
 
 	// Get total count
 	var total int
-	countArgs := args[:len(args):len(args)] // Safe copy
-	err := r.db.GetContext(ctx, &total, countQuery, countArgs...)
-	if err != nil {
+	row := r.db.QueryRow(ctx, countQuery, args...)
+	if err := row.Scan(&total); err != nil {
 		return nil, 0, err
 	}
 
@@ -109,28 +106,44 @@ func (r *ClientRepository) List(ctx context.Context, filters client.Filters, lim
 		limit = 10
 	}
 
-	// Add pagination and sorting - use last_updated
 	query += fmt.Sprintf(" ORDER BY last_updated DESC LIMIT $%d OFFSET $%d", argCount, argCount+1)
 	args = append(args, limit, offset)
 
-	// Use temporary struct to handle JSON
-	var tempClients []ClientEntity
-	err = r.db.SelectContext(ctx, &tempClients, query, args...)
+	rows, err := r.db.Query(ctx, query, args...)
 	if err != nil {
 		return nil, 0, err
 	}
+	defer rows.Close()
 
-	// Convert to client.Entity with proper contracts
-	clients := make([]client.Entity, len(tempClients))
-	for i, temp := range tempClients {
-		clients[i] = temp.Entity
+	var clients []client.Entity
+	for rows.Next() {
+		var temp ClientEntity
+		err := rows.Scan(
+			&temp.ID,
+			&temp.Name,
+			&temp.Email,
+			&temp.CurrentStage,
+			&temp.LastUpdated,
+			&temp.IsActive,
+			&temp.Source,
+			&temp.Channel,
+			&temp.App,
+			&temp.LastLogin,
+			&temp.ContractsRaw,
+		)
+		if err != nil {
+			return nil, 0, err
+		}
+
 		if temp.ContractsRaw != nil {
 			var contracts []contract.Entity
 			if err := json.Unmarshal(temp.ContractsRaw, &contracts); err != nil {
 				return nil, 0, fmt.Errorf("failed to unmarshal contracts: %w", err)
 			}
-			clients[i].Contracts = contracts
+			temp.Entity.Contracts = contracts
 		}
+
+		clients = append(clients, temp.Entity)
 	}
 
 	return clients, total, nil
@@ -138,20 +151,10 @@ func (r *ClientRepository) List(ctx context.Context, filters client.Filters, lim
 
 // Create inserts a new client into the database.
 func (r *ClientRepository) Create(ctx context.Context, data client.Entity) (client.Entity, error) {
-	// Generate UUID if not provided
 	if data.ID == "" {
 		data.ID = uuid.NewString()
 	}
 
-	// Note: Not including last_updated in INSERT since it has DEFAULT NOW()
-	query := `INSERT INTO clients (
-		id, name, email, current_stage, is_active, 
-		source, channel, app, last_login, contracts
-	) VALUES (
-		$1, $2, $3, $4, $5, $6, $7, $8, $9, $10
-	) RETURNING id, last_updated`
-
-	// Handle pointer fields for defaults
 	if data.CurrentStage == nil {
 		stage := "new"
 		data.CurrentStage = &stage
@@ -161,7 +164,6 @@ func (r *ClientRepository) Create(ctx context.Context, data client.Entity) (clie
 		data.IsActive = &active
 	}
 
-	// Marshal contracts to JSON
 	var contractsJSON []byte
 	if data.Contracts != nil {
 		var err error
@@ -170,6 +172,12 @@ func (r *ClientRepository) Create(ctx context.Context, data client.Entity) (clie
 			return client.Entity{}, fmt.Errorf("failed to marshal contracts: %w", err)
 		}
 	}
+
+	query := `INSERT INTO clients (
+		id, name, email, current_stage, is_active, 
+		source, channel, app, last_login, contracts
+	) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+	  RETURNING id, last_updated`
 
 	args := []interface{}{
 		data.ID,
@@ -185,39 +193,85 @@ func (r *ClientRepository) Create(ctx context.Context, data client.Entity) (clie
 	}
 
 	var temp ClientEntity
-	err := r.db.QueryRowContext(ctx, query, args...).Scan(&temp.ID, &temp.LastUpdated)
+	err := r.db.QueryRow(ctx, query, args...).Scan(&temp.ID, &temp.LastUpdated)
 	if err != nil {
-		// Check for unique constraint violation
-		if pqErr, ok := err.(*pq.Error); ok && pqErr.Code == "23505" {
-			if pqErr.Constraint == "clients_email_key" {
-				return client.Entity{}, errors.New("email already exists")
-			}
-		}
-		return client.Entity{}, err
+		return client.Entity{}, fmt.Errorf("failed to insert client: %w", err)
 	}
 
-	// Copy the returned values to data
 	data.ID = temp.ID
 	data.LastUpdated = temp.LastUpdated
 	return data, nil
 }
 
-// Get retrieves a client by ID from the database.
+// Count counts clients based on a BSON filter.
+func (r *ClientRepository) Count(ctx context.Context, filter bson.M) (int64, error) {
+	query := "SELECT COUNT(*) FROM clients WHERE 1=1"
+	args := []interface{}{}
+	argCount := 1
+
+	for key, value := range filter {
+		// handle simple equality or Mongo-style operators if needed
+		if subMap, ok := value.(bson.M); ok {
+			for op, opValue := range subMap {
+				switch op {
+				case "$gte":
+					query += fmt.Sprintf(" AND %s >= $%d", key, argCount)
+					args = append(args, opValue)
+					argCount++
+				case "$lte":
+					query += fmt.Sprintf(" AND %s <= $%d", key, argCount)
+					args = append(args, opValue)
+					argCount++
+				case "$ne":
+					query += fmt.Sprintf(" AND %s != $%d", key, argCount)
+					args = append(args, opValue)
+					argCount++
+					// add other operators if needed
+				}
+			}
+		} else {
+			query += fmt.Sprintf(" AND %s = $%d", key, argCount)
+			args = append(args, value)
+			argCount++
+		}
+	}
+
+	var count int64
+	row := r.db.QueryRow(ctx, query, args...)
+	if err := row.Scan(&count); err != nil {
+		return 0, err
+	}
+
+	return count, nil
+}
+
+// Get retrieves a client by ID.
 func (r *ClientRepository) Get(ctx context.Context, id string) (client.Entity, error) {
 	query := `SELECT id, name, email, current_stage, last_updated,
 		is_active, source, channel, app, last_login, contracts 
-		FROM clients WHERE id = $1`
+		FROM clients WHERE id=$1`
 
 	var temp ClientEntity
-	err := r.db.GetContext(ctx, &temp, query, id)
+	err := r.db.QueryRow(ctx, query, id).Scan(
+		&temp.ID,
+		&temp.Name,
+		&temp.Email,
+		&temp.CurrentStage,
+		&temp.LastUpdated,
+		&temp.IsActive,
+		&temp.Source,
+		&temp.Channel,
+		&temp.App,
+		&temp.LastLogin,
+		&temp.ContractsRaw,
+	)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return client.Entity{}, store.ErrorNotFound
 		}
 		return client.Entity{}, err
 	}
 
-	// Unmarshal contracts from JSON
 	if temp.ContractsRaw != nil {
 		var contracts []contract.Entity
 		if err := json.Unmarshal(temp.ContractsRaw, &contracts); err != nil {
@@ -229,22 +283,33 @@ func (r *ClientRepository) Get(ctx context.Context, id string) (client.Entity, e
 	return temp.Entity, nil
 }
 
-// GetByEmail retrieves a client by email from the database.
+// GetByEmail retrieves a client by email.
 func (r *ClientRepository) GetByEmail(ctx context.Context, email string) (client.Entity, error) {
 	query := `SELECT id, name, email, current_stage, last_updated,
 		is_active, source, channel, app, last_login, contracts 
-		FROM clients WHERE email = $1`
+		FROM clients WHERE email=$1`
 
 	var temp ClientEntity
-	err := r.db.GetContext(ctx, &temp, query, email)
+	err := r.db.QueryRow(ctx, query, email).Scan(
+		&temp.ID,
+		&temp.Name,
+		&temp.Email,
+		&temp.CurrentStage,
+		&temp.LastUpdated,
+		&temp.IsActive,
+		&temp.Source,
+		&temp.Channel,
+		&temp.App,
+		&temp.LastLogin,
+		&temp.ContractsRaw,
+	)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return client.Entity{}, store.ErrorNotFound
 		}
 		return client.Entity{}, err
 	}
 
-	// Unmarshal contracts from JSON
 	if temp.ContractsRaw != nil {
 		var contracts []contract.Entity
 		if err := json.Unmarshal(temp.ContractsRaw, &contracts); err != nil {
@@ -256,24 +321,16 @@ func (r *ClientRepository) GetByEmail(ctx context.Context, email string) (client
 	return temp.Entity, nil
 }
 
-// Update modifies an existing client in the database.
+// Update modifies an existing client.
 func (r *ClientRepository) Update(ctx context.Context, id string, data client.Entity) (client.Entity, error) {
 	query := `UPDATE clients SET 
-		name = $1,
-		email = $2,
-		current_stage = $3,
-		is_active = $4,
-		source = $5,
-		channel = $6,
-		app = $7,
-		last_login = $8,
-		contracts = $9,
-		last_updated = NOW()
-		WHERE id = $10
+		name=$1, email=$2, current_stage=$3, is_active=$4,
+		source=$5, channel=$6, app=$7, last_login=$8, contracts=$9,
+		last_updated=NOW()
+		WHERE id=$10
 		RETURNING id, name, email, current_stage, last_updated,
 		is_active, source, channel, app, last_login, contracts`
 
-	// Marshal contracts to JSON
 	var contractsJSON []byte
 	if data.Contracts != nil {
 		var err error
@@ -297,12 +354,12 @@ func (r *ClientRepository) Update(ctx context.Context, id string, data client.En
 	}
 
 	var temp ClientEntity
-	err := r.db.QueryRowContext(ctx, query, args...).Scan(
+	err := r.db.QueryRow(ctx, query, args...).Scan(
 		&temp.ID,
 		&temp.Name,
 		&temp.Email,
 		&temp.CurrentStage,
-		&temp.LastUpdated, // Make sure this is included!
+		&temp.LastUpdated,
 		&temp.IsActive,
 		&temp.Source,
 		&temp.Channel,
@@ -311,19 +368,12 @@ func (r *ClientRepository) Update(ctx context.Context, id string, data client.En
 		&temp.ContractsRaw,
 	)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return client.Entity{}, store.ErrorNotFound
-		}
-		// Check for unique constraint violation
-		if pqErr, ok := err.(*pq.Error); ok && pqErr.Code == "23505" {
-			if pqErr.Constraint == "clients_email_key" {
-				return client.Entity{}, errors.New("email already exists")
-			}
 		}
 		return client.Entity{}, err
 	}
 
-	// Unmarshal contracts
 	if temp.ContractsRaw != nil {
 		var contracts []contract.Entity
 		if err := json.Unmarshal(temp.ContractsRaw, &contracts); err != nil {
@@ -335,66 +385,15 @@ func (r *ClientRepository) Update(ctx context.Context, id string, data client.En
 	return temp.Entity, nil
 }
 
-// Count counts clients based on filter.
-func (r *ClientRepository) Count(ctx context.Context, filter bson.M) (int64, error) {
-	query := "SELECT COUNT(*) FROM clients WHERE 1=1"
-	args := []interface{}{}
-	argCount := 1
-
-	for key, value := range filter {
-		// Handle MongoDB-style operators
-		if subMap, ok := value.(bson.M); ok {
-			for op, opValue := range subMap {
-				switch op {
-				case "$gte":
-					query += fmt.Sprintf(" AND %s >= $%d", key, argCount)
-					args = append(args, opValue)
-					argCount++
-				case "$lte":
-					query += fmt.Sprintf(" AND %s <= $%d", key, argCount)
-					args = append(args, opValue)
-					argCount++
-				case "$ne":
-					query += fmt.Sprintf(" AND %s != $%d", key, argCount)
-					args = append(args, opValue)
-					argCount++
-					// Add other operators as needed
-				}
-			}
-		} else {
-			// Simple equality
-			query += fmt.Sprintf(" AND %s = $%d", key, argCount)
-			args = append(args, value)
-			argCount++
-		}
-	}
-
-	var count int64
-	err := r.db.GetContext(ctx, &count, query, args...)
-	if err != nil {
-		return 0, err
-	}
-
-	return count, nil
-}
-
-// Delete removes a client from the database.
+// Delete removes a client.
 func (r *ClientRepository) Delete(ctx context.Context, id string) error {
-	query := "DELETE FROM clients WHERE id = $1"
-
-	result, err := r.db.ExecContext(ctx, query, id)
+	cmdTag, err := r.db.Exec(ctx, "DELETE FROM clients WHERE id=$1", id)
 	if err != nil {
 		return err
 	}
 
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		return err
-	}
-
-	if rowsAffected == 0 {
+	if cmdTag.RowsAffected() == 0 {
 		return store.ErrorNotFound
 	}
-
 	return nil
 }

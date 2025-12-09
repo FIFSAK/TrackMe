@@ -20,7 +20,7 @@ type Configuration func(r *Repository) error
 type Repository struct {
 	clickhouse store.ClickHouse
 	mongo      store.Mongo
-	postgres   store.SQLX
+	postgres   store.PostgreSQL
 	Stage      stage.Repository
 	Client     client.Repository
 	User       user.Repository
@@ -48,10 +48,7 @@ func New(configs ...Configuration) (s *Repository, err error) {
 // Close then waits for all queries that have started processing on the server to finish.
 func (r *Repository) Close() {
 	if r.postgres.Client != nil {
-		err := r.postgres.Client.Close()
-		if err != nil {
-			return
-		}
+		r.postgres.Client.Close() // no :=, just call it
 	}
 
 	if r.mongo.Client != nil {
@@ -111,15 +108,14 @@ func WithClickHouseStore(dsn string) Configuration {
 
 func WithPostgresStore(dsn string) Configuration {
 	return func(s *Repository) error {
-		// Create PostgreSQL connection with sqlx
-		db, err := store.NewPostgres(dsn) // returns SQLX struct with db *sqlx.DB
+		db, err := store.NewPostgres(dsn) // returns PostgreSQL VALUE, not pointer
 		if err != nil {
 			return err
 		}
+
 		s.postgres = db
 
-		// Initialize repositories
-		s.Client = postgres.NewClientRepository(s.postgres.Client) // *sqlx.DB
+		s.Client = postgres.NewClientRepository(s.postgres.Client)
 		s.User = postgres.NewUserRepository(s.postgres.Client)
 
 		return nil

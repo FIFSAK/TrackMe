@@ -2,26 +2,36 @@ package store
 
 import (
 	"context"
-	"time"
 
-	"github.com/jmoiron/sqlx"
-	_ "github.com/lib/pq" // PostgreSQL driver
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// NewPostgres creates a new PostgreSQL connection using sqlx and verifies it.
-func NewPostgres(dsn string) (store SQLX, err error) {
+type PostgreSQL struct {
+	Client *pgxpool.Pool
+}
+
+func NewPostgres(dsn string) (PostgreSQL, error) {
+	var pg PostgreSQL
+
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
-	store.Client, err = sqlx.ConnectContext(ctx, "postgres", dsn)
+	cfg, err := pgxpool.ParseConfig(dsn)
 	if err != nil {
-		return
+		return pg, err
 	}
 
-	// Optional: set max idle and open connections
-	store.Client.SetMaxOpenConns(25)
-	store.Client.SetMaxIdleConns(25)
-	store.Client.SetConnMaxLifetime(5 * time.Minute)
+	cfg.MaxConns = 25
 
-	return
+	pool, err := pgxpool.NewWithConfig(ctx, cfg)
+	if err != nil {
+		return pg, err
+	}
+
+	if err := pool.Ping(ctx); err != nil {
+		return pg, err
+	}
+
+	pg.Client = pool
+	return pg, nil
 }
