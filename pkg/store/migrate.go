@@ -41,39 +41,19 @@ func Migrate(dataSourceName string) (err error) {
 // MigrateClickHouse ensures required tables exist
 func MigrateClickHouse(ctx context.Context, conn clickhouse.Conn) error {
 	tables := []string{
-		`CREATE TABLE IF NOT EXISTS users (
-			id UUID,
-			name String,
-			email String,
-			password String,
-			role String,
-			created_at DateTime,
-			updated_at DateTime
-		) ENGINE = ReplacingMergeTree(updated_at)
-		ORDER BY id`,
-
-		`CREATE TABLE IF NOT EXISTS clients (
-			id UUID,
-			name String,
-			email String,
-			current_stage String,
-			last_updated DateTime DEFAULT now(),
-			is_active UInt8,
-			source String,
-			channel String,
-			app String,
-			last_login DateTime
-		) ENGINE = ReplacingMergeTree(last_updated)
-		ORDER BY id`,
-
 		`CREATE TABLE IF NOT EXISTS metrics (
-			id UUID,
-			client_id UUID,
-			metric_type String,
+			id String,
+			type String,
 			value Float64,
+			interval Nullable(String),
+			created_at DateTime,
+			metadata Map(String, String),
+			client_id UUID,
 			timestamp DateTime DEFAULT now()
 		) ENGINE = MergeTree()
-		ORDER BY (client_id, timestamp)`,
+		ORDER BY (client_id, type, timestamp)
+		PARTITION BY toYYYYMM(timestamp)
+		TTL timestamp + INTERVAL 90 DAY DELETE`, // Optional: add retention policy
 	}
 
 	for _, query := range tables {

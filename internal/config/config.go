@@ -71,6 +71,10 @@ func New() (cfg Configs, err error) {
 		Path: os.Getenv("APP_PATH"),
 	}
 
+	cfg.JWT = JWTConfig{
+		SecretKey: os.Getenv("JWT_SECRET_KEY"),
+	}
+
 	cfg.Redis = RedisConfig{
 		URL: os.Getenv("REDIS_URL"),
 	}

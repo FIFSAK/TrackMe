@@ -8,9 +8,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	"time"
+
+	"github.com/google/uuid"
+	"go.mongodb.org/mongo-driver/bson"
 )
 
 // ListMetrics retrieves all metric from the repository.
@@ -1045,7 +1046,7 @@ func (s *Service) calculateAutoPaymentRate(ctx context.Context, timestamp time.T
 
 func (s *Service) createMetric(id string, metricType metric.Type, value float64, interval string, timestamp time.Time, metaData map[string]string) (metric.Entity, error) {
 	if id == "" {
-		id = primitive.NewObjectID().Hex()
+		id = uuid.New().String()
 	}
 
 	// Ensure metadata is never nil

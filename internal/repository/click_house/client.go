@@ -17,7 +17,7 @@ type ClientRepository struct {
 }
 
 func GenerateUUID() string {
-	return uuid.NewString()
+	return uuid.New().String()
 }
 
 func NewClientRepository(conn clickhouse.Conn) *ClientRepository {
