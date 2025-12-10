@@ -3,7 +3,9 @@ package clickhouse
 import (
 	"TrackMe/internal/domain/metric"
 	"context"
+	"database/sql"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/ClickHouse/clickhouse-go/v2"
@@ -51,15 +53,37 @@ func (r *MetricRepository) Add(ctx context.Context, data metric.Entity) (string,
 
 // List retrieves metrics with optional filters
 func (r *MetricRepository) List(ctx context.Context, filters metric.Filters) ([]metric.Entity, error) {
-	// Use ? for ClickHouse positional parameters
-	query := `SELECT id, type, value, interval, created_at, metadata 
-			  FROM metrics 
-			  WHERE 1=1 
-			  AND type = ? 
-			  AND interval = ?`
+	query := `
+        SELECT 
+            id, 
+            type, 
+            value, 
+            interval, 
+            created_at, 
+            metadata,
+            client_id
+        FROM metrics 
+        WHERE 1=1 
+    `
 
-	rows, err := r.conn.Query(ctx, query, filters.Type, filters.Interval)
+	var args []interface{}
+	var conditions []string
 
+	if filters.Type != "" {
+		conditions = append(conditions, "type = ?")
+		args = append(args, filters.Type)
+	}
+
+	if filters.Interval != "" {
+		conditions = append(conditions, "interval = ?")
+		args = append(args, filters.Interval)
+	}
+
+	if len(conditions) > 0 {
+		query += " AND " + strings.Join(conditions, " AND ")
+	}
+
+	rows, err := r.conn.Query(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -68,18 +92,43 @@ func (r *MetricRepository) List(ctx context.Context, filters metric.Filters) ([]
 	var metrics []metric.Entity
 	for rows.Next() {
 		var m metric.Entity
+
+		// Temporary variables for scanning
+		var metricType string
+		var value float64
+		var interval sql.NullString
+		var createdAt time.Time
+		var metadataMap map[string]string // Changed from string to map
+		var clientID string
+
 		if err := rows.Scan(
 			&m.ID,
-			&m.Type,
-			&m.Value,
-			&m.Interval,
-			&m.CreatedAt,
-			&m.Metadata,
+			&metricType,
+			&value,
+			&interval,
+			&createdAt,
+			&metadataMap, // Scan directly as map
+			&clientID,
 		); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to scan row: %w", err)
 		}
+
+		// Convert string to metric.Type
+		t := metric.Type(metricType)
+		m.Type = &t
+		m.Value = &value
+
+		if interval.Valid {
+			intervalStr := interval.String
+			m.Interval = &intervalStr
+		}
+
+		m.CreatedAt = &createdAt
+		m.Metadata = metadataMap // Assign the map directly
+
 		metrics = append(metrics, m)
 	}
+
 	return metrics, nil
 }
 

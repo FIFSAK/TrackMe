@@ -3,13 +3,13 @@ package http
 import (
 	"TrackMe/internal/domain/metric"
 	"TrackMe/pkg/jwt"
-	"TrackMe/pkg/server/middleware"
 	"TrackMe/pkg/server/response"
 	"TrackMe/pkg/store"
 	"context"
 	"errors"
-	"github.com/go-chi/chi/v5"
 	"net/http"
+
+	"github.com/go-chi/chi/v5"
 )
 
 // Define an interface that matches the methods used by MetricHandler
@@ -33,11 +33,11 @@ func NewMetricHandler(s metricTrackService, tm *jwt.TokenManager) *MetricHandler
 func (h *MetricHandler) Routes() chi.Router {
 	r := chi.NewRouter()
 
-	// All routes require authentication
-	r.Use(middleware.AuthMiddleware(h.tokenManager))
+	// // All routes require authentication
+	// r.Use(middleware.AuthMiddleware(h.tokenManager))
 
-	// All authenticated users (including managers) can view metrics (read-only)
-	r.Use(middleware.RequireAdminOrManager())
+	// // All authenticated users (including managers) can view metrics (read-only)
+	// r.Use(middleware.RequireAdminOrManager())
 
 	r.Get("/", h.list)
 	r.Get("/calculate", h.triggerCalculateAllMetrics)
