@@ -7,7 +7,7 @@ export const options = {
     { duration: '30s', target: 10 },  // Ramp up
     // { duration: '1m', target: 50 },   // Normal load
     { duration: '30s', target: 100 }, // Stress load
-    // { duration: '30s', target: 0 },   // Ramp down
+    { duration: '30s', target: 1000},   // Ramp down
   ],
   thresholds: {
     http_req_duration: ['p(95)<500'],

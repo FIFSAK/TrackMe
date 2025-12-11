@@ -21,7 +21,7 @@ func NewPostgres(dsn string) (PostgreSQL, error) {
 		return pg, err
 	}
 
-	cfg.MaxConns = 25
+	cfg.MaxConns = 100
 
 	pool, err := pgxpool.NewWithConfig(ctx, cfg)
 	if err != nil {
