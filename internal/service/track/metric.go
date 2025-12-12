@@ -152,12 +152,13 @@ func (s *Service) CalculateAllMetrics(ctx context.Context, interval string) erro
 		}
 
 		// Add DAU/MAU based on interval
-		if interval == "day" {
+		switch interval {
+		case "day":
 			metricsToInvalidate = append(metricsToInvalidate, struct {
 				Type     string
 				Interval string
 			}{string(metric.DAU), "day"})
-		} else if interval == "month" {
+		case "month":
 			metricsToInvalidate = append(metricsToInvalidate, struct {
 				Type     string
 				Interval string

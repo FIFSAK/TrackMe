@@ -140,7 +140,7 @@ func (r *ClientRepository) List(ctx context.Context, filters client.Filters, lim
 			if err := json.Unmarshal(temp.ContractsRaw, &contracts); err != nil {
 				return nil, 0, fmt.Errorf("failed to unmarshal contracts: %w", err)
 			}
-			temp.Entity.Contracts = contracts
+			temp.Contracts = contracts
 		}
 
 		clients = append(clients, temp.Entity)
@@ -277,7 +277,7 @@ func (r *ClientRepository) Get(ctx context.Context, id string) (client.Entity, e
 		if err := json.Unmarshal(temp.ContractsRaw, &contracts); err != nil {
 			return client.Entity{}, fmt.Errorf("failed to unmarshal contracts: %w", err)
 		}
-		temp.Entity.Contracts = contracts
+		temp.Contracts = contracts
 	}
 
 	return temp.Entity, nil
@@ -315,7 +315,7 @@ func (r *ClientRepository) GetByEmail(ctx context.Context, email string) (client
 		if err := json.Unmarshal(temp.ContractsRaw, &contracts); err != nil {
 			return client.Entity{}, fmt.Errorf("failed to unmarshal contracts: %w", err)
 		}
-		temp.Entity.Contracts = contracts
+		temp.Contracts = contracts
 	}
 
 	return temp.Entity, nil
@@ -379,7 +379,7 @@ func (r *ClientRepository) Update(ctx context.Context, id string, data client.En
 		if err := json.Unmarshal(temp.ContractsRaw, &contracts); err != nil {
 			return client.Entity{}, fmt.Errorf("failed to unmarshal contracts: %w", err)
 		}
-		temp.Entity.Contracts = contracts
+		temp.Contracts = contracts
 	}
 
 	return temp.Entity, nil

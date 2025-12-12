@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"log"
 	"strings"
 
 	"github.com/ClickHouse/clickhouse-go/v2"
@@ -73,7 +74,12 @@ func MigratePostgres(dsn string, migrationsPath string) error {
 	if err != nil {
 		return fmt.Errorf("failed to open postgres connection: %w", err)
 	}
-	defer db.Close()
+	defer func(db *sql.DB) {
+		cerr := db.Close()
+		if cerr != nil {
+			log.Printf("db.Close error: %v", cerr)
+		}
+	}(db)
 
 	driver, err := postgres.WithInstance(db, &postgres.Config{})
 	if err != nil {

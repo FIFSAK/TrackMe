@@ -1,3 +1,4 @@
+version: 2
 run:
   timeout: 2m
   tests: true
@@ -7,9 +8,11 @@ linters:
     - govet
     - errcheck
     - staticcheck
-    - gosimple
     - unused
-    # Removed: deadcode, structcheck, varcheck (all replaced by unused)
 
 issues:
   exclude-use-default: false
+  exclude-dirs:
+    - third_party
+    - builtin
+    - examples

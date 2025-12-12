@@ -31,10 +31,10 @@ func (req *Request) Bind(r *http.Request) error {
 	if req.Status == "" {
 		return errors.New("status: cannot be blank")
 	}
-	if req.ConclusionDate == (time.Time{}) {
+	if req.ConclusionDate.Equal((time.Time{})) {
 		return errors.New("conclusion_date: cannot be blank")
 	}
-	if req.ExpirationDate == (time.Time{}) {
+	if req.ExpirationDate.Equal((time.Time{})) {
 		return errors.New("expiration_date: cannot be blank")
 	}
 	if req.Amount <= 0 {

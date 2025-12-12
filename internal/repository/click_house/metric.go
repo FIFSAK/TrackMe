@@ -5,10 +5,12 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"log"
 	"strings"
 	"time"
 
 	"github.com/ClickHouse/clickhouse-go/v2"
+	"github.com/ClickHouse/clickhouse-go/v2/lib/driver"
 	"github.com/google/uuid"
 )
 
@@ -87,7 +89,12 @@ func (r *MetricRepository) List(ctx context.Context, filters metric.Filters) ([]
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func(rows driver.Rows) {
+		cerr := rows.Close()
+		if cerr != nil {
+			log.Printf("rows.Close error: %v", cerr)
+		}
+	}(rows)
 
 	var metrics []metric.Entity
 	for rows.Next() {
