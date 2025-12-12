@@ -61,7 +61,7 @@ func (tm *TokenManager) ValidateToken(tokenString string) (*Claims, error) {
 		return nil, ErrInvalidToken
 	}
 
-	if claims.ExpiresAt != nil && claims.ExpiresAt.Time.Before(time.Now()) {
+	if claims.ExpiresAt != nil && claims.ExpiresAt.Before(time.Now()) {
 		return nil, ErrExpiredToken
 	}
 

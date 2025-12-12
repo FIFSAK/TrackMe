@@ -5,9 +5,11 @@ import (
 	"TrackMe/pkg/store"
 	"context"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/ClickHouse/clickhouse-go/v2"
+	"github.com/ClickHouse/clickhouse-go/v2/lib/driver"
 )
 
 // UserRepository implements user.Repository for ClickHouse
@@ -101,7 +103,12 @@ func (r *UserRepository) List(ctx context.Context, limit, offset int) ([]user.En
 	if err != nil {
 		return nil, 0, err
 	}
-	defer rows.Close()
+	defer func(rows driver.Rows) {
+		cerr := rows.Close()
+		if cerr != nil {
+			log.Printf("rows.Close error: %v", cerr)
+		}
+	}(rows)
 
 	var users []user.Entity
 	for rows.Next() {

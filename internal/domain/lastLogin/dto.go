@@ -12,7 +12,7 @@ type Request struct {
 
 // Bind validates the request payload.
 func (s *Request) Bind(r *http.Request) error {
-	if s.Date == (time.Time{}) {
+	if s.Date.Equal((time.Time{})) {
 		return errors.New("date: cannot be blank")
 	}
 	return nil
@@ -26,10 +26,7 @@ type Response struct {
 
 // ParseFromEntity converts a client entity to a response payload.
 func ParseFromEntity(data Entity) Response {
-	highlight := false
-	if time.Since(data.Date) > 30*24*time.Hour {
-		highlight = true
-	}
+	highlight := time.Since(data.Date) > 30*24*time.Hour
 
 	return Response{
 		Date:      data.Date.UTC().Format("02.01.2006"),

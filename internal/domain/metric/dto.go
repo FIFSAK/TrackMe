@@ -27,7 +27,7 @@ func (req *Request) Bind(r *http.Request) error {
 	if req.Interval == "" {
 		return errors.New("interval: cannot be blank")
 	}
-	if req.CreatedAt == (time.Time{}) {
+	if req.CreatedAt.Equal((time.Time{})) {
 		return errors.New("created_at: cannot be blank")
 	}
 	return nil

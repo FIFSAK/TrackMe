@@ -4,8 +4,10 @@ import (
 	"TrackMe/internal/domain/client"
 	"TrackMe/pkg/store"
 	"context"
+	"log"
 	"time"
 
+	"github.com/ClickHouse/clickhouse-go/v2/lib/driver"
 	"go.mongodb.org/mongo-driver/bson"
 
 	"github.com/ClickHouse/clickhouse-go/v2"
@@ -110,7 +112,12 @@ func (r *ClientRepository) List(ctx context.Context, filters client.Filters, lim
 	if err != nil {
 		return nil, 0, err
 	}
-	defer rows.Close()
+	defer func(rows driver.Rows) {
+		cerr := rows.Close()
+		if cerr != nil {
+			log.Printf("rows.Close error: %v", cerr)
+		}
+	}(rows)
 
 	var clients []client.Entity
 	for rows.Next() {
