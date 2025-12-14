@@ -113,9 +113,15 @@ func (r *StageRepository) UpdateStage(ctx context.Context, currentStageID, direc
 			if currentStageEntity.ID == "completed" {
 				return "", fmt.Errorf("no next stage available from current stage: %s", currentStageID)
 			}
-			nextStage, err := r.Get(ctx, currentStageEntity.AllowedTransitions[0])
+			var (
+				nextStage stage.Entity
+				err       error
+			)
 			if len(currentStageEntity.AllowedTransitions) > 1 {
 				nextStage, err = r.Get(ctx, currentStageEntity.AllowedTransitions[1])
+			} else {
+				nextStage, err = r.Get(ctx, currentStageEntity.AllowedTransitions[0])
+
 			}
 			if err != nil {
 				return "", fmt.Errorf("failed to get next stage: %w", err)
@@ -128,9 +134,6 @@ func (r *StageRepository) UpdateStage(ctx context.Context, currentStageID, direc
 				return "", fmt.Errorf("no previous stage available from current stage: %s", currentStageID)
 			}
 			prevStage, err := r.Get(ctx, currentStageEntity.AllowedTransitions[0])
-			if len(currentStageEntity.AllowedTransitions) > 1 {
-				prevStage, err = r.Get(ctx, currentStageEntity.AllowedTransitions[1])
-			}
 			if err != nil {
 				return "", fmt.Errorf("failed to get previous stage: %w", err)
 			}
