@@ -212,8 +212,6 @@ func (s *Service) calculateDAU(ctx context.Context, timestamp time.Time) error {
 		return err
 	}
 
-	s.PrometheusMetrics.DAU.Set(float64(count))
-
 	return nil
 }
 
@@ -236,8 +234,6 @@ func (s *Service) calculateMAU(ctx context.Context, timestamp time.Time) error {
 	if err != nil && !errors.Is(err, store.ErrorNotFound) {
 		return err
 	}
-
-	s.PrometheusMetrics.MAU.Set(float64(count))
 
 	return nil
 }
@@ -264,7 +260,6 @@ func (s *Service) calculateClientsPerStage(ctx context.Context, timestamp time.T
 		if err != nil {
 			return err
 		}
-		s.PrometheusMetrics.ClientsPerStage.WithLabelValues(stage.ID).Set(float64(count))
 
 	}
 
@@ -302,8 +297,6 @@ func (s *Service) calculateStageDuration(ctx context.Context, timestamp time.Tim
 		if _, err := s.MetricRepository.Add(ctx, metricEntity); err != nil {
 			return err
 		}
-
-		s.PrometheusMetrics.StageDuration.WithLabelValues(stageID).Set(avgDuration.Hours())
 
 	}
 
@@ -449,8 +442,10 @@ func firstDayOfISOWeek(year, week int, loc *time.Location) time.Time {
 }
 
 func (s *Service) calculateRollbackCount(ctx context.Context, timestamp time.Time) error {
-	fromContext := log.LoggerFromContext(ctx)
-	todayDate := timestamp.Format("2006-01-02")
+	logger := log.LoggerFromContext(ctx)
+	todayDate := timestamp.Truncate(24 * time.Hour)
+
+	// Получаем текущее значение за сегодня
 	rollBackCountMetrics, err := s.ListMetrics(ctx, metric.Filters{
 		Type:     string(metric.RollbackCount),
 		Interval: "day",
@@ -460,67 +455,54 @@ func (s *Service) calculateRollbackCount(ctx context.Context, timestamp time.Tim
 	}
 
 	metricType := metric.RollbackCount
+	interval := "day"
 
-	for _, m := range rollBackCountMetrics {
-		if m.CreatedAt.Format("2006-01-02") == todayDate {
-			newValue := m.Value + 1.0
+	// Ищем метрику за сегодня
+	var currentValue float64 = 0
+	var existingID string
 
-			interval := "day"
-			// Create a new entity without ID - the ID will be set by MongoDB update operation
-			updated := metric.Entity{
-				ID:        m.ID,
-				Type:      &metricType,
-				Value:     &newValue,
-				Interval:  &interval,
-				CreatedAt: &timestamp,
-				Metadata:  make(map[string]string),
-			}
-
-			if err != nil {
-				return fmt.Errorf("failed to create updated rollback metric: %w", err)
-			}
-
-			if _, err = s.MetricRepository.Update(ctx, updated.ID, updated); err != nil {
-				return fmt.Errorf("failed to update rollback count: %w", err)
-			}
-
-			// Invalidate the cached list so future queries get fresh data
-			if s.MetricCache != nil {
-				if err = s.MetricCache.InvalidateListCache(ctx, metric.Filters{
-					Type:     string(metric.RollbackCount),
-					Interval: "day",
-				}); err != nil {
-					// Log error but don't fail the operation
-					fromContext.Warn().Err(err).Msg("failed to invalidate metrics cache")
-				}
-			}
-
-			s.PrometheusMetrics.RollbackCount.Inc()
-
-			return nil
+	for i := range rollBackCountMetrics {
+		metricDate := rollBackCountMetrics[i].CreatedAt.Truncate(24 * time.Hour)
+		if metricDate.Equal(todayDate) {
+			currentValue = rollBackCountMetrics[i].Value
+			existingID = rollBackCountMetrics[i].ID
+			break
 		}
 	}
 
-	newMetric, err := s.createMetric("", metricType, 1.0, "day", timestamp, nil)
-	if err != nil {
-		return fmt.Errorf("failed to create rollback metric: %w", err)
+	newValue := currentValue + 1.0
+
+	// Используем фиксированный ID для каждой даты
+	if existingID == "" {
+		existingID = fmt.Sprintf("rollback-%s", todayDate.Format("2006-01-02"))
+	}
+
+	newMetric := metric.Entity{
+		ID:        existingID, // Используем тот же ID для замены
+		Type:      &metricType,
+		Value:     &newValue,
+		Interval:  &interval,
+		CreatedAt: &timestamp,
+		Metadata:  make(map[string]string),
 	}
 
 	if _, err = s.MetricRepository.Add(ctx, newMetric); err != nil {
-		return fmt.Errorf("failed to store rollback metric: %w", err)
+		return fmt.Errorf("failed to increment rollback count: %w", err)
 	}
 
-	// Invalidate the cached list after adding a new metric
+	logger.Info().
+		Str("id", existingID).
+		Float64("new_value", newValue).
+		Msg("Rollback count updated")
+
 	if s.MetricCache != nil {
 		if err = s.MetricCache.InvalidateListCache(ctx, metric.Filters{
 			Type:     string(metric.RollbackCount),
 			Interval: "day",
 		}); err != nil {
-			fromContext.Warn().Err(err).Msg("failed to invalidate metrics cache")
+			logger.Warn().Err(err).Msg("failed to invalidate metrics cache")
 		}
 	}
-
-	s.PrometheusMetrics.RollbackCount.Inc()
 
 	return nil
 }
@@ -554,7 +536,6 @@ func (s *Service) calculateDropout(ctx context.Context, timestamp time.Time, int
 	if err != nil && !errors.Is(err, store.ErrorNotFound) {
 		return err
 	}
-	s.PrometheusMetrics.Dropout.Set(float64(count))
 
 	return err
 }
@@ -642,8 +623,6 @@ func (s *Service) calculateConversion(ctx context.Context, timestamp time.Time, 
 		return err
 	}
 
-	s.PrometheusMetrics.Conversion.Set(conversionRate)
-
 	return nil
 }
 
@@ -692,8 +671,6 @@ func (s *Service) calculateTotalDuration(ctx context.Context, timestamp time.Tim
 	if err != nil && !errors.Is(err, store.ErrorNotFound) {
 		return err
 	}
-
-	s.PrometheusMetrics.TotalDuration.Set(avgDurationDays)
 
 	return nil
 }
@@ -746,8 +723,6 @@ func (s *Service) calculateStatusUpdates(ctx context.Context, timestamp time.Tim
 	if _, err = s.MetricRepository.Add(ctx, m); err != nil {
 		return fmt.Errorf("failed to store status updates metric: %w", err)
 	}
-
-	s.PrometheusMetrics.StatusUpdates.Set(float64(count))
 
 	return nil
 }
@@ -859,8 +834,6 @@ func (s *Service) calculateSourceConversion(ctx context.Context, timestamp time.
 		if _, err := s.MetricRepository.Add(ctx, m); err != nil {
 			return fmt.Errorf("failed to store source conversion metric: %w", err)
 		}
-
-		s.PrometheusMetrics.SourceConversion.WithLabelValues(source).Set(conversionRate)
 
 	}
 
@@ -1007,7 +980,6 @@ func (s *Service) calculateAppInstallRate(ctx context.Context, timestamp time.Ti
 	if err != nil && !errors.Is(err, store.ErrorNotFound) {
 		return err
 	}
-	s.PrometheusMetrics.AppInstallRate.Set(installRate)
 
 	return nil
 }
@@ -1045,8 +1017,6 @@ func (s *Service) calculateAutoPaymentRate(ctx context.Context, timestamp time.T
 	if err != nil && !errors.Is(err, store.ErrorNotFound) {
 		return err
 	}
-
-	s.PrometheusMetrics.AutoPaymentRate.Set(autopaymentRate)
 
 	return err
 }

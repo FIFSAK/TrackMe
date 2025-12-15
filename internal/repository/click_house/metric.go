@@ -3,7 +3,6 @@ package clickhouse
 import (
 	"TrackMe/internal/domain/metric"
 	"context"
-	"database/sql"
 	"fmt"
 	"log"
 	"strings"
@@ -28,7 +27,6 @@ func (r *MetricRepository) Add(ctx context.Context, data metric.Entity) (string,
 		data.ID = uuid.New().String()
 	}
 
-	fmt.Println(data.ID) // Should be like: "f47ac10b-58cc-4372-a567-0e02b2c3d479"
 	if data.CreatedAt.IsZero() {
 		t := time.Now()
 		data.CreatedAt = &t
@@ -56,17 +54,16 @@ func (r *MetricRepository) Add(ctx context.Context, data metric.Entity) (string,
 // List retrieves metrics with optional filters
 func (r *MetricRepository) List(ctx context.Context, filters metric.Filters) ([]metric.Entity, error) {
 	query := `
-        SELECT 
-            id, 
-            type, 
-            value, 
-            interval, 
-            created_at, 
-            metadata,
-            client_id
-        FROM metrics 
-        WHERE 1=1 
-    `
+  SELECT
+   id,
+   type,
+   argMax(value, created_at) as value,
+   argMax(interval, created_at) as metric_interval,
+   argMax(toDate(created_at), created_at) as created_date,
+   argMax(metadata, created_at) as metadata
+  FROM metrics
+  WHERE 1=1
+ `
 
 	var args []interface{}
 	var conditions []string
@@ -85,6 +82,9 @@ func (r *MetricRepository) List(ctx context.Context, filters metric.Filters) ([]
 		query += " AND " + strings.Join(conditions, " AND ")
 	}
 
+	query += " GROUP BY id, type"
+	query += " ORDER BY created_date DESC"
+
 	rows, err := r.conn.Query(ctx, query, args...)
 	if err != nil {
 		return nil, err
@@ -99,39 +99,29 @@ func (r *MetricRepository) List(ctx context.Context, filters metric.Filters) ([]
 	var metrics []metric.Entity
 	for rows.Next() {
 		var m metric.Entity
-
-		// Temporary variables for scanning
 		var metricType string
 		var value float64
-		var interval sql.NullString
-		var createdAt time.Time
-		var metadataMap map[string]string // Changed from string to map
-		var clientID string
+		var interval string
+		var createdDate time.Time
+		var metadataMap map[string]string
 
 		if err := rows.Scan(
 			&m.ID,
 			&metricType,
 			&value,
 			&interval,
-			&createdAt,
-			&metadataMap, // Scan directly as map
-			&clientID,
+			&createdDate,
+			&metadataMap,
 		); err != nil {
 			return nil, fmt.Errorf("failed to scan row: %w", err)
 		}
 
-		// Convert string to metric.Type
 		t := metric.Type(metricType)
 		m.Type = &t
 		m.Value = &value
-
-		if interval.Valid {
-			intervalStr := interval.String
-			m.Interval = &intervalStr
-		}
-
-		m.CreatedAt = &createdAt
-		m.Metadata = metadataMap // Assign the map directly
+		m.Interval = &interval
+		m.CreatedAt = &createdDate
+		m.Metadata = metadataMap
 
 		metrics = append(metrics, m)
 	}

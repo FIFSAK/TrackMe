@@ -3,7 +3,6 @@ package app
 import (
 	"TrackMe/internal/cache"
 	"TrackMe/internal/config"
-	"TrackMe/internal/domain/prometheus"
 	"TrackMe/internal/handler"
 	"TrackMe/internal/repository"
 	"TrackMe/internal/service/track"
@@ -38,7 +37,6 @@ func Run() {
 		return
 	}
 
-	promMetrics := prometheus.New()
 	repositories, err := repository.New(
 		repository.WithPostgresStore(configs.POSTGRES.DSN),
 		repository.WithMemoryStore(),
@@ -67,7 +65,6 @@ func Run() {
 		track.WithUserRepository(repositories.User),
 		track.WithStageRepository(repositories.Stage),
 		track.WithMetricRepository(repositories.Metric),
-		track.WithPrometheusMetrics(promMetrics),
 		track.WithMetricCache(caches.Metric))
 	if err != nil {
 		logger.Error().Err(err).Msg("ERR_INIT_LIBRARY_SERVICE")
