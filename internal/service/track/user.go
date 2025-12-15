@@ -10,6 +10,19 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+type AuthService interface {
+	CreateUser(ctx context.Context, req user.Request) (user.Response, error)
+	Login(ctx context.Context, email, password string) (user.Entity, error)
+}
+
+type UserService interface {
+	ListUsers(ctx context.Context, limit, offset int) ([]user.Response, int, error)
+	CreateUser(ctx context.Context, req user.Request) (user.Response, error)
+	GetUser(ctx context.Context, id string) (user.Response, error)
+	UpdateUser(ctx context.Context, id string, req user.Request) (user.Response, error)
+	DeleteUser(ctx context.Context, id string) error
+}
+
 // ListUsers retrieves all users from the repository.
 func (s *Service) ListUsers(ctx context.Context, limit, offset int) ([]user.Response, int, error) {
 	logger := log.LoggerFromContext(ctx).With().

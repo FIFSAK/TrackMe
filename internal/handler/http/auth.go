@@ -1,7 +1,6 @@
 package http
 
 import (
-	"context"
 	"net/http"
 	"time"
 
@@ -10,21 +9,17 @@ import (
 
 	"TrackMe/internal/domain/auth"
 	"TrackMe/internal/domain/user"
+	"TrackMe/internal/service/track"
 	"TrackMe/pkg/jwt"
 	"TrackMe/pkg/server/response"
 )
 
-type AuthService interface {
-	CreateUser(ctx context.Context, req user.Request) (user.Response, error)
-	Login(ctx context.Context, email, password string) (user.Entity, error)
-}
-
 type AuthHandler struct {
-	authService  AuthService
+	authService  track.AuthService
 	tokenManager *jwt.TokenManager
 }
 
-func NewAuthHandler(s AuthService, tm *jwt.TokenManager) *AuthHandler {
+func NewAuthHandler(s track.AuthService, tm *jwt.TokenManager) *AuthHandler {
 	return &AuthHandler{
 		authService:  s,
 		tokenManager: tm,

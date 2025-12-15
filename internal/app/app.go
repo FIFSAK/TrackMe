@@ -33,13 +33,6 @@ func Run() {
 		return
 	}
 
-	// if err = store.Migrate(configs.MONGO.DSN); err != nil {
-	// 	logger.Error().Err(err).Msg("ERR_MIGRATE_DATABASE")
-	// 	return
-	// }
-
-	// migarate postgres
-
 	if err = store.MigratePostgres(configs.POSTGRES.DSN, "file://migrations/postgresql"); err != nil {
 		logger.Error().Err(err).Msg("ERR_MIGRATE_DATABASE")
 		return
@@ -47,7 +40,6 @@ func Run() {
 
 	promMetrics := prometheus.New()
 	repositories, err := repository.New(
-		// repository.WithMongoStore(configs.MONGO.DSN, "trackme"),
 		repository.WithPostgresStore(configs.POSTGRES.DSN),
 		repository.WithMemoryStore(),
 		repository.WithClickHouseStore(configs.CLICKHOUSE.ADDR, configs.CLICKHOUSE.UserName, configs.CLICKHOUSE.Password, configs.CLICKHOUSE.DB),
@@ -103,7 +95,6 @@ func Run() {
 	metricWorker := worker.NewMetricWorker(trackService)
 	metricWorker.Start()
 
-	// Run our server in a goroutine so that it doesn't block
 	if err = servers.Run(logger); err != nil {
 		logger.Error().Err(err).Msg("ERR_RUN_SERVERS")
 		return

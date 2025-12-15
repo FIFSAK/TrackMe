@@ -39,7 +39,6 @@ func New(d Dependencies, configs ...Configuration) (s *Cache, err error) {
 	return
 }
 
-// Close closes the cache and prevents new queries from starting.
 // Close then waits for all queries that have started processing on the server to finish.
 func (r *Cache) Close() {
 	if r.redis.Connection != nil {

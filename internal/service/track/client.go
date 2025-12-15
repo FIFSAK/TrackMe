@@ -11,6 +11,13 @@ import (
 	"github.com/google/uuid"
 )
 
+type ClientTrackService interface {
+	ListClients(ctx context.Context, filters client.Filters, limit, offset int) ([]client.Response, int, error)
+	CreateClient(ctx context.Context, req client.Request) (client.Response, error)
+	UpdateClient(ctx context.Context, id string, req client.Request) (client.Response, error)
+	DeleteClient(ctx context.Context, id string) error
+}
+
 // ListClients retrieves all clients from the repository.
 func (s *Service) ListClients(ctx context.Context, filters client.Filters, limit, offset int) ([]client.Response, int, error) {
 	logger := log.LoggerFromContext(ctx).With().

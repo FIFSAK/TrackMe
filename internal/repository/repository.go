@@ -7,7 +7,6 @@ import (
 	"TrackMe/internal/domain/user"
 	clickhouse "TrackMe/internal/repository/click_house"
 	"TrackMe/internal/repository/memory"
-	"TrackMe/internal/repository/mongo"
 	"TrackMe/internal/repository/postgres"
 	"TrackMe/pkg/store"
 	"context"
@@ -64,26 +63,6 @@ func WithMemoryStore() Configuration {
 	return func(s *Repository) (err error) {
 		// Create the memory store, if we needed parameters, such as connection strings they could be inputted here
 		s.Stage = memory.NewStageRepository()
-
-		return
-	}
-}
-
-// WithMongoStore applies a mongo store to the Repository
-func WithMongoStore(uri, name string) Configuration {
-	return func(s *Repository) (err error) {
-		// Create the mongo store, if we needed parameters, such as connection strings they could be inputted here
-		s.mongo, err = store.NewMongo(uri)
-		if err != nil {
-			return
-		}
-		database := s.mongo.Client.Database(name)
-
-		s.Client = mongo.NewClientRepository(database)
-
-		s.User = mongo.NewUserRepository(database)
-
-		// s.Metric = mongo.NewMetricRepository(database)
 
 		return
 	}

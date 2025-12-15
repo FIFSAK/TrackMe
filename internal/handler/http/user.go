@@ -1,7 +1,6 @@
 package http
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -11,26 +10,19 @@ import (
 	"github.com/go-chi/render"
 
 	"TrackMe/internal/domain/user"
+	"TrackMe/internal/service/track"
 	"TrackMe/pkg/jwt"
 	"TrackMe/pkg/server/middleware"
 	"TrackMe/pkg/server/response"
 	"TrackMe/pkg/store"
 )
 
-type UserService interface {
-	ListUsers(ctx context.Context, limit, offset int) ([]user.Response, int, error)
-	CreateUser(ctx context.Context, req user.Request) (user.Response, error)
-	GetUser(ctx context.Context, id string) (user.Response, error)
-	UpdateUser(ctx context.Context, id string, req user.Request) (user.Response, error)
-	DeleteUser(ctx context.Context, id string) error
-}
-
 type UserHandler struct {
-	userService  UserService
+	userService  track.UserService
 	tokenManager *jwt.TokenManager
 }
 
-func NewUserHandler(s UserService, tm *jwt.TokenManager) *UserHandler {
+func NewUserHandler(s track.UserService, tm *jwt.TokenManager) *UserHandler {
 	return &UserHandler{
 		userService:  s,
 		tokenManager: tm,

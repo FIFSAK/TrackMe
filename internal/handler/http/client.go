@@ -1,7 +1,6 @@
 package http
 
 import (
-	"context"
 	"errors"
 	"net/http"
 	"strconv"
@@ -13,25 +12,19 @@ import (
 
 	"TrackMe/internal/domain/client"
 	"TrackMe/internal/domain/user"
+	"TrackMe/internal/service/track"
 	"TrackMe/pkg/jwt"
 	"TrackMe/pkg/server/middleware"
 	"TrackMe/pkg/server/response"
 	"TrackMe/pkg/store"
 )
 
-type ClientTrackService interface {
-	ListClients(ctx context.Context, filters client.Filters, limit, offset int) ([]client.Response, int, error)
-	CreateClient(ctx context.Context, req client.Request) (client.Response, error)
-	UpdateClient(ctx context.Context, id string, req client.Request) (client.Response, error)
-	DeleteClient(ctx context.Context, id string) error
-}
-
 type ClientHandler struct {
-	trackService ClientTrackService
+	trackService track.ClientTrackService
 	tokenManager *jwt.TokenManager
 }
 
-func NewClientHandler(s ClientTrackService, tm *jwt.TokenManager) *ClientHandler {
+func NewClientHandler(s track.ClientTrackService, tm *jwt.TokenManager) *ClientHandler {
 	return &ClientHandler{
 		trackService: s,
 		tokenManager: tm,

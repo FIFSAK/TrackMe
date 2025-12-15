@@ -14,6 +14,12 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 )
 
+// Define an interface that matches the methods used by MetricHandler
+type MetricTrackService interface {
+	ListMetrics(ctx context.Context, filters metric.Filters) ([]metric.Response, error)
+	CalculateAllMetrics(ctx context.Context, interval string) error
+}
+
 // ListMetrics retrieves all metric from the repository.
 func (s *Service) ListMetrics(ctx context.Context, filters metric.Filters) ([]metric.Response, error) {
 	logger := log.LoggerFromContext(ctx).With().

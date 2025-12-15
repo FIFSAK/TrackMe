@@ -2,28 +2,22 @@ package http
 
 import (
 	"TrackMe/internal/domain/metric"
+	"TrackMe/internal/service/track"
 	"TrackMe/pkg/jwt"
 	"TrackMe/pkg/server/response"
 	"TrackMe/pkg/store"
-	"context"
 	"errors"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
 )
 
-// Define an interface that matches the methods used by MetricHandler
-type metricTrackService interface {
-	ListMetrics(ctx context.Context, filters metric.Filters) ([]metric.Response, error)
-	CalculateAllMetrics(ctx context.Context, interval string) error
-}
-
 type MetricHandler struct {
-	trackService metricTrackService
+	trackService track.MetricTrackService
 	tokenManager *jwt.TokenManager
 }
 
-func NewMetricHandler(s metricTrackService, tm *jwt.TokenManager) *MetricHandler {
+func NewMetricHandler(s track.MetricTrackService, tm *jwt.TokenManager) *MetricHandler {
 	return &MetricHandler{
 		trackService: s,
 		tokenManager: tm,

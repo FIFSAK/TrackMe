@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"time"
@@ -13,7 +14,6 @@ type (
 	Configs struct {
 		APP        AppConfig
 		CURRENCY   ClientConfig
-		MONGO      StoreConfig
 		CLICKHOUSE ClickhouseConfig
 		POSTGRES   StoreConfig
 		Redis      RedisConfig
@@ -65,6 +65,20 @@ func New() (cfg Configs, err error) {
 		return Configs{}, err
 	}
 
+	requiredEnvVars := []string{
+		"APP_MODE", "APP_PORT", "APP_PATH",
+		"JWT_SECRET_KEY",
+		"REDIS_URL",
+		"CLICKHOUSE_ADDR", "CLICKHOUSE_USERNAME", "CLICKHOUSE_PASSWORD", "CLICKHOUSE_DB",
+		"POSTGRES_DSN",
+	}
+
+	for _, envVar := range requiredEnvVars {
+		if os.Getenv(envVar) == "" {
+			return Configs{}, fmt.Errorf("required environment variable %s is not set", envVar)
+		}
+	}
+
 	cfg.APP = AppConfig{
 		Mode: os.Getenv("APP_MODE"),
 		Port: os.Getenv("APP_PORT"),
@@ -77,10 +91,6 @@ func New() (cfg Configs, err error) {
 
 	cfg.Redis = RedisConfig{
 		URL: os.Getenv("REDIS_URL"),
-	}
-
-	cfg.MONGO = StoreConfig{
-		DSN: os.Getenv("MONGO_DSN"),
 	}
 
 	cfg.CLICKHOUSE = ClickhouseConfig{
@@ -99,10 +109,6 @@ func New() (cfg Configs, err error) {
 	}
 
 	if err = envconfig.Process("CURRENCY", &cfg.CURRENCY); err != nil {
-		return
-	}
-
-	if err = envconfig.Process("MONGO", &cfg.MONGO); err != nil {
 		return
 	}
 
