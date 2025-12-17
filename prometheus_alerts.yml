@@ -1,0 +1,153 @@
+groups:
+  - name: trackme_alerts
+    interval: 30s
+    rules:
+      # Alert if P95 latency > 2 seconds
+      - alert: HighLatencyP95
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 2
+        for: 2m
+        labels:
+          severity: warning
+          service: trackme
+        annotations:
+          summary: "High latency detected (P95 > 2s)"
+          description: "95th percentile latency is {{ $value | humanizeDuration }} (threshold: 2s)"
+
+      # Alert if P99 latency > 5 seconds
+      - alert: HighLatencyP99
+        expr: histogram_quantile(0.99, rate(http_request_duration_seconds_bucket[5m])) > 5
+        for: 2m
+        labels:
+          severity: critical
+          service: trackme
+        annotations:
+          summary: "Critical latency detected (P99 > 5s)"
+          description: "99th percentile latency is {{ $value | humanizeDuration }} (threshold: 5s)"
+
+      # Alert if average latency > 1 second
+      - alert: HighAverageLatency
+        expr: rate(http_request_duration_seconds_sum[5m]) / rate(http_request_duration_seconds_count[5m]) > 1
+        for: 3m
+        labels:
+          severity: warning
+          service: trackme
+        annotations:
+          summary: "High average latency detected (> 1s)"
+          description: "Average request latency is {{ $value | humanizeDuration }} (threshold: 1s)"
+
+      # Alert for slow endpoints (by path)
+      - alert: SlowEndpoint
+        expr: |
+          (
+            sum by (path) (rate(http_request_duration_seconds_sum[5m]))
+            / sum by (path) (rate(http_request_duration_seconds_count[5m]))
+          ) > 3
+        for: 5m
+        labels:
+          severity: warning
+          service: trackme
+        annotations:
+          summary: "Endpoint {{ $labels.path }} is slow"
+          description: "Endpoint {{ $labels.path }} average latency is {{ $value | humanizeDuration }} (threshold: 3s)"
+
+      # Alert if error rate > 5%
+      - alert: HighErrorRate
+        expr: |
+          (
+            sum(rate(http_requests_total{status=~"5.."}[5m]))
+            / sum(rate(http_requests_total[5m]))
+          ) * 100 > 5
+        for: 3m
+        labels:
+          severity: critical
+          service: trackme
+        annotations:
+          summary: "High error rate detected (> 5%)"
+          description: "Error rate is {{ $value | printf \"%.2f\" }}% (threshold: 5%)"
+
+      # Alert if 4xx rate > 20%
+      - alert: HighClientErrorRate
+        expr: |
+          (
+            sum(rate(http_requests_total{status=~"4.."}[5m]))
+            / sum(rate(http_requests_total[5m]))
+          ) * 100 > 20
+        for: 5m
+        labels:
+          severity: warning
+          service: trackme
+        annotations:
+          summary: "High client error rate detected (> 20%)"
+          description: "Client error rate (4xx) is {{ $value | printf \"%.2f\" }}% (threshold: 20%)"
+
+      # Alert if service is down
+      - alert: ServiceDown
+        expr: up{job="trackme-app"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: trackme
+        annotations:
+          summary: "TrackMe service is down"
+          description: "TrackMe application is not responding to Prometheus scrapes"
+
+      # Alert if request rate drops significantly
+      - alert: LowRequestRate
+        expr: |
+          (
+            rate(http_requests_total[5m])
+            / rate(http_requests_total[5m] offset 1h)
+          ) < 0.5
+        for: 10m
+        labels:
+          severity: warning
+          service: trackme
+        annotations:
+          summary: "Request rate dropped significantly"
+          description: "Current request rate is 50% lower than 1 hour ago"
+
+      # Alert for very slow authentication requests
+      - alert: SlowAuthRequests
+        expr: |
+          (
+            sum by (path) (rate(http_request_duration_seconds_sum{path=~"/api/v1/auth.*"}[5m]))
+            / sum by (path) (rate(http_request_duration_seconds_count{path=~"/api/v1/auth.*"}[5m]))
+          ) > 2
+        for: 3m
+        labels:
+          severity: warning
+          service: trackme
+          component: auth
+        annotations:
+          summary: "Authentication endpoint {{ $labels.path }} is slow"
+          description: "Auth endpoint {{ $labels.path }} latency is {{ $value | humanizeDuration }} (threshold: 2s)"
+
+      # Alert for database-heavy operations (metrics endpoints)
+      - alert: SlowMetricsOperations
+        expr: |
+          (
+            sum by (path) (rate(http_request_duration_seconds_sum{path=~"/api/v1/metrics.*"}[5m]))
+            / sum by (path) (rate(http_request_duration_seconds_count{path=~"/api/v1/metrics.*"}[5m]))
+          ) > 5
+        for: 5m
+        labels:
+          severity: warning
+          service: trackme
+          component: metrics
+        annotations:
+          summary: "Metrics endpoint {{ $labels.path }} is slow"
+          description: "Metrics endpoint {{ $labels.path }} latency is {{ $value | humanizeDuration }} (threshold: 5s)"
+
+      # Alert if too many requests are timing out (taking > 10s)
+      - alert: RequestTimeouts
+        expr: |
+          sum(rate(http_request_duration_seconds_bucket{le="10"}[5m]))
+          - sum(rate(http_request_duration_seconds_bucket{le="5"}[5m])) > 10
+        for: 5m
+        labels:
+          severity: critical
+          service: trackme
+        annotations:
+          summary: "High number of request timeouts detected"
+          description: "More than 10 requests per second are taking longer than 5 seconds"
+

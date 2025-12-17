@@ -91,6 +91,7 @@ services:
     container_name: trackme-prometheus
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./prometheus_alerts.yml:/etc/prometheus/prometheus_alerts.yml
       - prometheus_data:/prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
