@@ -67,6 +67,9 @@ func New() *chi.Mux {
 
 	r.Use(middleware.CleanPath)
 
+	// Add Prometheus metrics middleware
+	r.Use(PrometheusMiddleware)
+
 	r.Use(middleware.Heartbeat("/"))
 
 	r.Use(render.SetContentType(render.ContentTypeJSON))
@@ -78,9 +81,6 @@ func New() *chi.Mux {
 		AllowCredentials: true,
 		MaxAge:           300, // Maximum value not ignored by any of major browsers
 	}))
-
-	// Add Prometheus metrics middleware
-	r.Use(PrometheusMiddleware)
 
 	// Expose Prometheus metrics endpoint
 	r.Handle("/metrics", promhttp.Handler())
