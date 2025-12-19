@@ -1,12 +1,12 @@
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: my-api-hpa
+  name: trackme-app-hpa
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: my-api
+    name: trackme-app
   minReplicas: 1
   maxReplicas: 5 # Максимальное число подов на одной ноде
   metrics:

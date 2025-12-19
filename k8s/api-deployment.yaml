@@ -1,20 +1,20 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: my-api
+  name: trackme-app
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: my-api
+      app: trackme-app
   template:
     metadata:
       labels:
-        app: my-api
+        app: trackme-app
     spec:
       containers:
         - name: api-container
-          image: ${DOCKER_USERNAME}/my-api:${IMAGE_TAG}
+          image: ${DOCKER_USERNAME}/trackme-app:${IMAGE_TAG}
           ports:
             - containerPort: 80
           resources:
