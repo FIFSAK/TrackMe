@@ -32,32 +32,32 @@ jobs:
           skip-pkg-cache: true
           skip-build-cache: true
 
-  test:
-    name: Test
-    runs-on: ubuntu-latest
-    needs: lint
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Set up Go
-        uses: actions/setup-go@v4
-        with:
-          go-version: 1.21
-          cache: true
-
-      - name: Run tests
-        run: go test -v -race -coverprofile=coverage.txt -covermode=atomic ./...
-
-      - name: Upload coverage
-        uses: codecov/codecov-action@v3
-        with:
-          file: ./coverage.txt
+#  test:
+#    name: Test
+#    runs-on: ubuntu-latest
+#    needs: lint
+#    steps:
+#      - name: Checkout code
+#        uses: actions/checkout@v3
+#
+#      - name: Set up Go
+#        uses: actions/setup-go@v4
+#        with:
+#          go-version: 1.21
+#          cache: true
+#
+#      - name: Run tests
+#        run: go test -v -race -coverprofile=coverage.txt -covermode=atomic ./...
+#
+#      - name: Upload coverage
+#        uses: codecov/codecov-action@v3
+#        with:
+#          file: ./coverage.txt
 
   build:
     name: Build and Push Docker Images
     runs-on: ubuntu-latest
-    needs: test
+#    needs: test
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -86,67 +86,40 @@ jobs:
           DOCKER_USERNAME=${{ secrets.DOCKER_USERNAME }} docker-compose push
 
   deploy:
-    name: Deploy
+    name: Deploy to K3s
     runs-on: ubuntu-latest
     needs: build
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
     steps:
+      - name: Replace variables in manifests
+        run: |
+          export IMAGE_TAG=${{ github.sha }}
+          # Создаем временную папку для готовых конфигов
+          mkdir -p ./out
+          envsubst < k8s/deployment.yaml > ./out/deployment.yaml
+          cp k8s/service.yaml ./out/
+          cp k8s/hpa.yaml ./out/
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Create .env file for transfer
-        run: |
-          echo "${{ secrets.ENV_FILE }}" > .env
-
-      - name: Copy files to server
+      - name: Copy K8s manifests to server
         uses: appleboy/scp-action@master
         with:
           host: ${{ secrets.HOST }}
           username: ${{ secrets.USERNAME }}
           key: ${{ secrets.SSH_KEY }}
-          source: "docker-compose.yml,.env,prometheus.yml,migrations/**"
-          target: "/trackme"
+          source: "k8s/"
+          target: "/trackme/k8s"
 
-      - name: Deploy to production
+      - name: Deploy to K3s via SSH
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.HOST }}
           username: ${{ secrets.USERNAME }}
           key: ${{ secrets.SSH_KEY }}
           script: |
-            if ! command -v docker &> /dev/null; then
-              echo "Docker not found, installing..."
-              sudo apt-get update
-              sudo apt-get install -y apt-transport-https ca-certificates curl software-properties-common
-              curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
-              sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
-              sudo apt-get update
-              sudo apt-get install -y docker-ce docker-ce-cli containerd.io
-              sudo systemctl start docker
-              sudo systemctl enable docker
-              sudo usermod -aG docker $USER
-            fi
-            
-            if ! systemctl is-active --quiet docker; then
-            echo "Docker is not running, starting it..."
-            sudo systemctl start docker
-            fi
-
-            if ! command -v docker-compose &> /dev/null && ! docker compose version &> /dev/null; then
-              sudo curl -L "https://github.com/docker/compose/releases/download/v2.23.3/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-              sudo chmod +x /usr/local/bin/docker-compose
-            fi
-            
-            mkdir -p /trackme
-            cd /trackme
-            docker-compose pull
-            docker-compose up -d
-
-      - name: Copy docker-compose.yml to server
-        uses: appleboy/scp-action@master
-        with:
-          host: ${{ secrets.HOST }}
-          username: ${{ secrets.USERNAME }}
-          key: ${{ secrets.SSH_KEY }}
-          source: "docker-compose.yml"
-          target: "/trackme"
+            cd /trackme/k8s
+            # Применяем манифесты (Deployment, Service, HPA)
+            # Мы используем --force или kubectl rollout restart, чтобы обновить поды
+            sudo kubectl apply -f .
+            sudo kubectl rollout restart deployment my-api

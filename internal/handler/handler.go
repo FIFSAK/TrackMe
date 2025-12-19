@@ -2,7 +2,6 @@ package handler
 
 import (
 	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
 	httpSwagger "github.com/swaggo/http-swagger/v2"
 
 	"TrackMe/docs"
@@ -53,7 +52,7 @@ func WithHTTPHandler() Configuration {
 		// Create the http handler, if we needed parameters, such as connection strings they could be inputted here
 		h.HTTP = router.New()
 
-		h.HTTP.Use(middleware.Timeout(h.dependencies.Configs.APP.Timeout))
+		//h.HTTP.Use(middleware.Timeout(h.dependencies.Configs.APP.Timeout))
 
 		basePath := h.dependencies.Configs.APP.Path
 

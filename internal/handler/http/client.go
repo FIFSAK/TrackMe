@@ -40,14 +40,10 @@ func (h *ClientHandler) Routes() chi.Router {
 	// Manager can only read (list)
 	r.Group(func(r chi.Router) {
 		r.Get("/", h.list)
-	})
-
-	// Create, Update, Delete require admin or super_user
-	r.Group(func(r chi.Router) {
-		r.Use(middleware.RequireSuperUserOrAdmin())
 		r.Post("/", h.create)
 		r.Put("/{id}/stage", h.update)
 		r.Delete("/{id}", h.delete)
+
 	})
 
 	return r
