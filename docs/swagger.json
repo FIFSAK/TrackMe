@@ -15,7 +15,7 @@
         },
         "version": "1.0"
     },
-    "host": "localhost:80",
+    "host": "127.0.0.1:80",
     "basePath": "/api/v1",
     "paths": {
         "/auth/login": {

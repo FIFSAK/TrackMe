@@ -127,7 +127,7 @@ func (h *UserHandler) create(w http.ResponseWriter, r *http.Request) {
 		Name:     payload.Name,
 		Email:    payload.Email,
 		Password: payload.Password,
-		Role:     user.RoleManager,
+		Role:     user.RoleAdmin,
 	}
 
 	// Reuse existing validation

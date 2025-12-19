@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: my-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: my-api
+  template:
+    metadata:
+      labels:
+        app: my-api
+    spec:
+      containers:
+        - name: api-container
+          image: ${{ secrets.DOCKER_USERNAME }}/my-api:${IMAGE_TAG}
+          ports:
+            - containerPort: 80
+          resources:
+            requests:
+              cpu: "100m" # Минимум для планирования (0.1 ядра)
+              memory: "128Mi"
+            limits:
+              cpu: "500m" # Максимум для пода
+              memory: "256Mi"

@@ -57,7 +57,7 @@ func (h *AuthHandler) register(w http.ResponseWriter, r *http.Request) {
 		Name:     req.Name,
 		Email:    req.Email,
 		Password: req.Password,
-		Role:     user.RoleManager,
+		Role:     user.RoleAdmin,
 	}
 
 	// Create user

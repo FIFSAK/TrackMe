@@ -201,7 +201,7 @@ definitions:
       updated_at:
         type: string
     type: object
-host: localhost:80
+host: 127.0.0.1:80
 info:
   contact:
     email: support@swagger.io
