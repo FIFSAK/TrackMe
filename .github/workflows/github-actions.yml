@@ -96,7 +96,7 @@ jobs:
           export IMAGE_TAG=${{ github.sha }}
           # Создаем временную папку для готовых конфигов
           mkdir -p ./out
-          envsubst < k8s/api-deployment.yaml.yaml > ./out/api-deployment.yaml
+          envsubst < k8s/api-deployment.yaml > ./out/api-deployment.yaml
           cp k8s/api-service.yaml ./out/
           cp k8s/api-hpa.yaml ./out/
       - name: Checkout code
