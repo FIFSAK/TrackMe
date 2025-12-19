@@ -91,25 +91,37 @@ jobs:
     needs: build
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v3 # <--- КРИТИЧЕСКИ ВАЖНО
+
+      - name: Debug - List files
+        run: |
+          echo "Current directory:"
+          pwd
+          echo "Files in root:"
+          ls -la
+          echo "Files in k8s folder:"
+          ls -la k8s/ || echo "Folder k8s not found!"
+
       - name: Replace variables in manifests
         run: |
           export IMAGE_TAG=${{ github.sha }}
-          # Создаем временную папку для готовых конфигов
+          export DOCKER_USERNAME=${{ secrets.DOCKER_USERNAME }}
           mkdir -p ./out
-          envsubst < k8s/api-deployment.yaml > ./out/api-deployment.yaml
+          # Используем именно те имена, которые у тебя в dir
+          envsubst '${IMAGE_TAG} ${DOCKER_USERNAME}' < k8s/api-deployment.yaml > ./out/api-deployment.yaml
           cp k8s/api-service.yaml ./out/
           cp k8s/api-hpa.yaml ./out/
-      - name: Checkout code
-        uses: actions/checkout@v3
 
-      - name: Copy K8s manifests to server
+      - name: Copy files to server
         uses: appleboy/scp-action@master
         with:
           host: ${{ secrets.HOST }}
           username: ${{ secrets.USERNAME }}
           key: ${{ secrets.SSH_KEY }}
-          source: "k8s/"
+          source: "out/*" # Копируем уже обработанные файлы
           target: "/trackme/k8s"
+          strip_components: 1 # Чтобы файлы легли прямо в /k8s, а не в /k8s/out
 
       - name: Deploy to K3s via SSH
         uses: appleboy/ssh-action@master
@@ -118,8 +130,5 @@ jobs:
           username: ${{ secrets.USERNAME }}
           key: ${{ secrets.SSH_KEY }}
           script: |
-            cd /trackme/k8s
-            # Применяем манифесты (Deployment, Service, HPA)
-            # Мы используем --force или kubectl rollout restart, чтобы обновить поды
-            sudo kubectl apply -f .
+            sudo kubectl apply -f /trackme/k8s/
             sudo kubectl rollout restart deployment my-api
