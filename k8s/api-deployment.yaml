@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: api-container
-          image: ${{ secrets.DOCKER_USERNAME }}/my-api:${IMAGE_TAG}
+          image: ${DOCKER_USERNAME}/my-api:${IMAGE_TAG}
           ports:
             - containerPort: 80
           resources:

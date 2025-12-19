@@ -112,6 +112,8 @@ jobs:
           envsubst '${IMAGE_TAG} ${DOCKER_USERNAME}' < k8s/api-deployment.yaml > ./out/api-deployment.yaml
           cp k8s/api-service.yaml ./out/
           cp k8s/api-hpa.yaml ./out/
+          echo "Generated manifest:"
+          cat ./out/api-deployment.yaml
 
       - name: Copy files to server
         uses: appleboy/scp-action@master
