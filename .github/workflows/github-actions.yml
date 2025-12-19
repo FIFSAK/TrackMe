@@ -133,4 +133,4 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           script: |
             sudo kubectl apply -f /trackme/k8s/
-            sudo kubectl rollout restart deployment my-api
+            sudo kubectl rollout restart deployment trackme-app
