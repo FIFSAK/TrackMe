@@ -13,8 +13,8 @@ spec:
         app: trackme-app
     spec:
       containers:
-        - name: api-container
-          image: ${DOCKER_USERNAME}/trackme-app:${IMAGE_TAG}
+        - name: trackme-app
+          image: fifsak/trackme-app:latest
           ports:
             - containerPort: 80
           resources:
