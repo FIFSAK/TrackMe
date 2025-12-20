@@ -166,10 +166,23 @@ spec:
           volumeMounts:
             - name: grafana-datasources
               mountPath: /etc/grafana/provisioning/datasources/
+            - name: grafana-dashboards-provider
+              mountPath: /etc/grafana/provisioning/dashboards/
+            - name: grafana-dashboards-json
+              mountPath: /var/lib/grafana/dashboards/ # Сюда провайдер будет смотреть
       volumes:
         - name: grafana-datasources
           configMap:
             name: grafana-config
+        - name: grafana-dashboards-provider
+          configMap:
+            name: grafana-dashboards-config
+            items:
+              - key: "dashboard-provider.yml" # Файл настроек
+                path: "dashboard-provider.yml"
+        - name: grafana-dashboards-json
+          configMap:
+            name: grafana-dashboards-config
 ---
 apiVersion: v1
 kind: Service

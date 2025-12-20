@@ -100,14 +100,15 @@ jobs:
             sudo kubectl delete configmap prometheus-config --ignore-not-found
             sudo kubectl create configmap prometheus-config \
               --from-file=prometheus.yml \
-              --from-file=prometheus_alerts.yml
+              --from-file=prometheus_alerts.yml \
+              --dry-run=client -o yaml | sudo kubectl apply -f -
             
             # 4. Создание ConfigMap для Grafana (Provisioning)
             sudo kubectl delete configmap grafana-config --ignore-not-found
             # Создаем конфиг из файлов в папке grafana/
             sudo kubectl create configmap grafana-config \
               --from-file=grafana/provisioning/datasources/datasource.yml
-              # Если есть дашборды, добавь: --from-file=grafana/provisioning/dashboards/
+              --from-file=grafana/provisioning/dashboards/
             
             # 5. Применение всех манифестов Kubernetes
             # Сначала инфраструктура, потом приложение, потом входная точка (Ingress)
