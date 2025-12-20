@@ -125,14 +125,10 @@ spec:
           volumeMounts:
             - name: config-volume
               mountPath: /etc/prometheus/
-            - name: data-volume
-              mountPath: /prometheus
       volumes:
         - name: config-volume
           configMap:
             name: prometheus-config
-        - name: data-volume
-          emptyDir: {} # Для сохранения данных при перезагрузке лучше использовать PVC
 ---
 apiVersion: v1
 kind: Service
@@ -164,25 +160,17 @@ spec:
         - name: grafana
           image: grafana/grafana:latest
           volumeMounts:
-            - name: grafana-datasources
+            - name: ds-vol
               mountPath: /etc/grafana/provisioning/datasources/
-            - name: grafana-dashboards-provider
+            - name: db-vol
               mountPath: /etc/grafana/provisioning/dashboards/
-            - name: grafana-dashboards-json
-              mountPath: /var/lib/grafana/dashboards/ # Сюда провайдер будет смотреть
       volumes:
-        - name: grafana-datasources
+        - name: ds-vol
           configMap:
-            name: grafana-config
-        - name: grafana-dashboards-provider
+            name: grafana-datasources
+        - name: db-vol
           configMap:
-            name: grafana-dashboards-config
-            items:
-              - key: "dashboard-provider.yml" # Файл настроек
-                path: "dashboard-provider.yml"
-        - name: grafana-dashboards-json
-          configMap:
-            name: grafana-dashboards-config
+            name: grafana-dashboards
 ---
 apiVersion: v1
 kind: Service

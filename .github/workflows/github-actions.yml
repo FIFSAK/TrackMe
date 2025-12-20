@@ -78,44 +78,40 @@ jobs:
           target: "/trackme/k8s"
           strip_components: 1 # Чтобы файлы легли прямо в /k8s, а не в /k8s/out
 
-      - name: Deploy to K3s via SSH
+      - name: Deploy to K3s
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.HOST }}
           username: ${{ secrets.USERNAME }}
           key: ${{ secrets.SSH_KEY }}
           script: |
-            # 1. Подготовка папок
-            sudo mkdir -p /trackme/deploy/grafana/provisioning/datasources
-            sudo mkdir -p /trackme/deploy/grafana/provisioning/dashboards
-            sudo chown -R ${{ secrets.USERNAME }}:${{ secrets.USERNAME }} /trackme/deploy
-            
             cd /trackme/deploy
             
-            # 2. Создание секрета приложения (перезаписываем)
-            sudo kubectl delete secret trackme-env --ignore-not-found
-            sudo kubectl create secret generic trackme-env --from-env-file=.env
+            # 1. Секреты приложения
+            sudo kubectl create secret generic trackme-env --from-env-file=.env --dry-run=client -o yaml | sudo kubectl apply -f -
             
-            # 3. Создание ConfigMap для Prometheus (с алертами)
-            sudo kubectl delete configmap prometheus-config --ignore-not-found
+            # 2. ConfigMap для Prometheus (берем оба файла из корня)
             sudo kubectl create configmap prometheus-config \
               --from-file=prometheus.yml \
               --from-file=prometheus_alerts.yml \
               --dry-run=client -o yaml | sudo kubectl apply -f -
             
-            # 4. Создание ConfigMap для Grafana (Provisioning)
-            sudo kubectl delete configmap grafana-config --ignore-not-found
-            # Создаем конфиг из файлов в папке grafana/
-            sudo kubectl create configmap grafana-config \
-              --from-file=grafana/provisioning/datasources/datasource.yml
-              --from-file=grafana/provisioning/dashboards/
+            # 3. ConfigMap для Grafana Datasources
+            sudo kubectl create configmap grafana-datasources \
+              --from-file=grafana/provisioning/datasources/ \
+              --dry-run=client -o yaml | sudo kubectl apply -f -
             
-            # 5. Применение всех манифестов Kubernetes
-            # Сначала инфраструктура, потом приложение, потом входная точка (Ingress)
-            sudo kubectl apply -f full-app.yaml
+            # 4. ConfigMap для Grafana Dashboards
+            sudo kubectl create configmap grafana-dashboards \
+              --from-file=grafana/provisioning/dashboards/ \
+              --dry-run=client -o yaml | sudo kubectl apply -f -
+            
+            # 5. Применяем манифесты (поменяй названия файлов на свои, если они другие)
+            sudo kubectl apply -f infrastructure.yaml
+            sudo kubectl apply -f api-deployment.yaml
+            sudo kubectl apply -f api-service.yaml
             sudo kubectl apply -f api-ingress.yaml
             
-            # 6. Принудительный рестарт, чтобы подхватить новые ConfigMaps
-            sudo kubectl rollout restart deployment trackme-app
+            # 6. Перезагружаем поды, чтобы они увидели новые конфиги
             sudo kubectl rollout restart deployment prometheus
             sudo kubectl rollout restart deployment grafana
