@@ -14,13 +14,16 @@ spec:
     spec:
       containers:
         - name: trackme-app
-          image: fifsak/trackme-app:latest
+          image: ${DOCKER_USERNAME}/trackme-app:latest # Переменная для envsubst
+          envFrom:
+            - secretRef:
+                name: trackme-env # ОБЯЗАТЕЛЬНО для связи с БД
           ports:
             - containerPort: 80
           resources:
             requests:
-              cpu: "100m" # Минимум для планирования (0.1 ядра)
+              cpu: "100m"
               memory: "128Mi"
             limits:
-              cpu: "500m" # Максимум для пода
+              cpu: "500m"
               memory: "256Mi"

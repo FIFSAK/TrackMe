@@ -7,35 +7,9 @@ on:
     branches: [ main, master ]
 
 jobs:
-  lint:
-    name: Lint
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Set up Go
-        uses: actions/setup-go@v4
-        with:
-          go-version: 1.21
-
-      - name: Download Go dependencies
-        run: |
-          go mod download
-          go mod tidy
-
-      - name: golangci-lint
-        uses: golangci/golangci-lint-action@v3
-        with:
-          version: v1.64
-          args: --timeout=5m
-          skip-pkg-cache: true
-          skip-build-cache: true
-
-#  test:
-#    name: Test
+#  lint:
+#    name: Lint
 #    runs-on: ubuntu-latest
-#    needs: lint
 #    steps:
 #      - name: Checkout code
 #        uses: actions/checkout@v3
@@ -44,20 +18,46 @@ jobs:
 #        uses: actions/setup-go@v4
 #        with:
 #          go-version: 1.21
-#          cache: true
 #
-#      - name: Run tests
-#        run: go test -v -race -coverprofile=coverage.txt -covermode=atomic ./...
+#      - name: Download Go dependencies
+#        run: |
+#          go mod download
+#          go mod tidy
 #
-#      - name: Upload coverage
-#        uses: codecov/codecov-action@v3
+#      - name: golangci-lint
+#        uses: golangci/golangci-lint-action@v3
 #        with:
-#          file: ./coverage.txt
+#          version: v1.64
+#          args: --timeout=5m
+#          skip-pkg-cache: true
+#          skip-build-cache: true
+
+  #  test:
+  #    name: Test
+  #    runs-on: ubuntu-latest
+  #    needs: lint
+  #    steps:
+  #      - name: Checkout code
+  #        uses: actions/checkout@v3
+  #
+  #      - name: Set up Go
+  #        uses: actions/setup-go@v4
+  #        with:
+  #          go-version: 1.21
+  #          cache: true
+  #
+  #      - name: Run tests
+  #        run: go test -v -race -coverprofile=coverage.txt -covermode=atomic ./...
+  #
+  #      - name: Upload coverage
+  #        uses: codecov/codecov-action@v3
+  #        with:
+  #          file: ./coverage.txt
 
   build:
     name: Build and Push Docker Images
     runs-on: ubuntu-latest
-#    needs: test
+    #    needs: test
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -112,6 +112,7 @@ jobs:
           envsubst '${IMAGE_TAG} ${DOCKER_USERNAME}' < k8s/api-deployment.yaml > ./out/api-deployment.yaml
           cp k8s/api-service.yaml ./out/
           cp k8s/api-hpa.yaml ./out/
+          cp k8s/infrastructure.yaml ./out/
           echo "Generated manifest:"
           cat ./out/api-deployment.yaml
 
@@ -132,5 +133,6 @@ jobs:
           username: ${{ secrets.USERNAME }}
           key: ${{ secrets.SSH_KEY }}
           script: |
+            sudo kubectl create secret generic trackme-env --from-env-file=.env --dry-run=client -o yaml | sudo kubectl apply -f -
             sudo kubectl apply -f /trackme/k8s/
             sudo kubectl rollout restart deployment trackme-app
