@@ -106,12 +106,17 @@ jobs:
               --from-file=grafana/provisioning/dashboards/ \
               --dry-run=client -o yaml | sudo kubectl apply -f -
 
-            # 5. Применяем манифесты (теперь из папки out)
+            # 5. ConfigMap для Grafana Dashboard JSON файлов
+            sudo kubectl create configmap grafana-dashboard-json \
+              --from-file=grafana/provisioning/dashboards/json/ \
+              --dry-run=client -o yaml | sudo kubectl apply -f -
+
+            # 6. Применяем манифесты (теперь из папки out)
             sudo kubectl apply -f out/infrastructure.yaml
             sudo kubectl apply -f out/api-deployment.yaml
             sudo kubectl apply -f out/api-service.yaml
             sudo kubectl apply -f out/api-hpa.yaml
-            
-            # 6. Перезагружаем поды, чтобы они увидели новые конфиги
+
+            # 7. Перезагружаем поды, чтобы они увидели новые конфиги
             sudo kubectl rollout restart deployment prometheus
             sudo kubectl rollout restart deployment grafana

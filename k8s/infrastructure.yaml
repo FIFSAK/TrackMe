@@ -164,6 +164,8 @@ spec:
               mountPath: /etc/grafana/provisioning/datasources/
             - name: db-vol
               mountPath: /etc/grafana/provisioning/dashboards/
+            - name: json-vol
+              mountPath: /etc/grafana/provisioning/dashboards/json/
       volumes:
         - name: ds-vol
           configMap:
@@ -171,6 +173,9 @@ spec:
         - name: db-vol
           configMap:
             name: grafana-dashboards
+        - name: json-vol
+          configMap:
+            name: grafana-dashboard-json
 ---
 apiVersion: v1
 kind: Service
