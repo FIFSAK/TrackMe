@@ -18,8 +18,40 @@ spec:
           envFrom:
             - secretRef:
                 name: trackme-env
+          env:
+            - name: POSTGRES_MAX_CONNECTIONS
+              value: "500"
+            - name: POSTGRES_SHARED_BUFFERS
+              value: "256MB"
+            - name: POSTGRES_EFFECTIVE_CACHE_SIZE
+              value: "1GB"
+            - name: POSTGRES_WORK_MEM
+              value: "4MB"
           ports:
             - containerPort: 5432
+          resources:
+            requests:
+                cpu: "500m"
+                memory: "512Mi"
+            limits:
+              memory: "2000m"
+              cpu: "4Gi"
+          command:
+            - "postgres"
+            - "-c"
+            - "max_connections=500"
+            - "-c"
+            - "shared_buffers=256MB"
+            - "-c"
+            - "effective_cache_size=1GB"
+            - "-c"
+            - "work_mem=4MB"
+            - "-c"
+            - "random_page_cost=1.1"
+            - "-c"
+            - "checkpoint_completion_target=0.9"
+            - "-c"
+            - "wal_buffers=16MB"
 ---
 apiVersion: v1
 kind: Service
@@ -85,6 +117,13 @@ spec:
           ports:
             - containerPort: 8123
             - containerPort: 9000
+          resources:
+            requests:
+              memory: "1000m"
+              cpu: "2Gi"
+            limits:
+              memory: "2000m"
+              cpu: "4Gi"
 ---
 apiVersion: v1
 kind: Service
