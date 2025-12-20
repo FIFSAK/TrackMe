@@ -21,7 +21,7 @@ func NewPostgres(dsn string) (PostgreSQL, error) {
 		return pg, err
 	}
 
-	cfg.MaxConns = 25
+	cfg.MaxConns = 10
 	cfg.MinConns = 5
 	cfg.MaxConnLifetime = 5 * 60
 	cfg.MaxConnIdleTime = 30

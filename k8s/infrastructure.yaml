@@ -15,6 +15,7 @@ spec:
       containers:
         - name: postgres
           image: postgres:15-alpine
+          args: ["-c", "max_connections=500"]
           envFrom:
             - secretRef:
                 name: trackme-env
@@ -119,8 +120,8 @@ spec:
             - containerPort: 9000
           resources:
             requests:
-              memory: "1000m"
-              cpu: "2Gi"
+              memory: "500m"
+              cpu: "1Gi"
             limits:
               memory: "2000m"
               cpu: "4Gi"
