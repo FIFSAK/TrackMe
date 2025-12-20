@@ -7,57 +7,9 @@ on:
     branches: [ main, master ]
 
 jobs:
-#  lint:
-#    name: Lint
-#    runs-on: ubuntu-latest
-#    steps:
-#      - name: Checkout code
-#        uses: actions/checkout@v3
-#
-#      - name: Set up Go
-#        uses: actions/setup-go@v4
-#        with:
-#          go-version: 1.21
-#
-#      - name: Download Go dependencies
-#        run: |
-#          go mod download
-#          go mod tidy
-#
-#      - name: golangci-lint
-#        uses: golangci/golangci-lint-action@v3
-#        with:
-#          version: v1.64
-#          args: --timeout=5m
-#          skip-pkg-cache: true
-#          skip-build-cache: true
-
-  #  test:
-  #    name: Test
-  #    runs-on: ubuntu-latest
-  #    needs: lint
-  #    steps:
-  #      - name: Checkout code
-  #        uses: actions/checkout@v3
-  #
-  #      - name: Set up Go
-  #        uses: actions/setup-go@v4
-  #        with:
-  #          go-version: 1.21
-  #          cache: true
-  #
-  #      - name: Run tests
-  #        run: go test -v -race -coverprofile=coverage.txt -covermode=atomic ./...
-  #
-  #      - name: Upload coverage
-  #        uses: codecov/codecov-action@v3
-  #        with:
-  #          file: ./coverage.txt
-
   build:
     name: Build and Push Docker Images
     runs-on: ubuntu-latest
-    #    needs: test
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -133,6 +85,36 @@ jobs:
           username: ${{ secrets.USERNAME }}
           key: ${{ secrets.SSH_KEY }}
           script: |
-            sudo kubectl create secret generic trackme-env --from-env-file=.env --dry-run=client -o yaml | sudo kubectl apply -f -
-            sudo kubectl apply -f /trackme/k8s/
+            # 1. Подготовка папок
+            sudo mkdir -p /trackme/deploy/grafana/provisioning/datasources
+            sudo mkdir -p /trackme/deploy/grafana/provisioning/dashboards
+            sudo chown -R ${{ secrets.USERNAME }}:${{ secrets.USERNAME }} /trackme/deploy
+            
+            cd /trackme/deploy
+            
+            # 2. Создание секрета приложения (перезаписываем)
+            sudo kubectl delete secret trackme-env --ignore-not-found
+            sudo kubectl create secret generic trackme-env --from-env-file=.env
+            
+            # 3. Создание ConfigMap для Prometheus (с алертами)
+            sudo kubectl delete configmap prometheus-config --ignore-not-found
+            sudo kubectl create configmap prometheus-config \
+              --from-file=prometheus.yml \
+              --from-file=prometheus_alerts.yml
+            
+            # 4. Создание ConfigMap для Grafana (Provisioning)
+            sudo kubectl delete configmap grafana-config --ignore-not-found
+            # Создаем конфиг из файлов в папке grafana/
+            sudo kubectl create configmap grafana-config \
+              --from-file=grafana/provisioning/datasources/datasource.yml
+              # Если есть дашборды, добавь: --from-file=grafana/provisioning/dashboards/
+            
+            # 5. Применение всех манифестов Kubernetes
+            # Сначала инфраструктура, потом приложение, потом входная точка (Ingress)
+            sudo kubectl apply -f full-app.yaml
+            sudo kubectl apply -f api-ingress.yaml
+            
+            # 6. Принудительный рестарт, чтобы подхватить новые ConfigMaps
             sudo kubectl rollout restart deployment trackme-app
+            sudo kubectl rollout restart deployment prometheus
+            sudo kubectl rollout restart deployment grafana

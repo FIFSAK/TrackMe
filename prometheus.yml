@@ -28,6 +28,6 @@ scrape_configs:
   - job_name: "trackme-app"
     metrics_path: /metrics
     static_configs:
-      - targets: ["app:80"]
+      - targets: ["trackme-app-service:80"]
         labels:
           app: "trackme-app"

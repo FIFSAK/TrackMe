@@ -48,7 +48,7 @@ spec:
       containers:
         - name: redis
           image: redis:latest
-          command: ["redis-server", "--requirepass", "redispassword"] # Вставьте пароль из .env
+          command: ["redis-server", "--requirepass", "redispassword"]
           ports:
             - containerPort: 6379
 ---
@@ -163,11 +163,13 @@ spec:
       containers:
         - name: grafana
           image: grafana/grafana:latest
-          envFrom:
-            - secretRef:
-                name: trackme-env
-          ports:
-            - containerPort: 3000
+          volumeMounts:
+            - name: grafana-datasources
+              mountPath: /etc/grafana/provisioning/datasources/
+      volumes:
+        - name: grafana-datasources
+          configMap:
+            name: grafana-config
 ---
 apiVersion: v1
 kind: Service
