@@ -15,44 +15,64 @@ spec:
       containers:
         - name: postgres
           image: postgres:15-alpine
-          args: ["-c", "max_connections=500"]
           envFrom:
             - secretRef:
                 name: trackme-env
-          env:
-            - name: POSTGRES_MAX_CONNECTIONS
-              value: "500"
-            - name: POSTGRES_SHARED_BUFFERS
-              value: "256MB"
-            - name: POSTGRES_EFFECTIVE_CACHE_SIZE
-              value: "1GB"
-            - name: POSTGRES_WORK_MEM
-              value: "4MB"
           ports:
             - containerPort: 5432
           resources:
             requests:
-                cpu: "500m"
-                memory: "512Mi"
+              cpu: "1000m"
+              memory: "1Gi"
             limits:
-              memory: "2000m"
-              cpu: "4Gi"
+              memory: "4Gi"
+              cpu: "2000m"
           command:
             - "postgres"
             - "-c"
-            - "max_connections=500"
+            - "max_connections=1000"              # Увеличили лимит
             - "-c"
-            - "shared_buffers=256MB"
+            - "shared_buffers=512MB"             # Увеличили буферы
             - "-c"
-            - "effective_cache_size=1GB"
+            - "effective_cache_size=2GB"         # Увеличили кэш
             - "-c"
-            - "work_mem=4MB"
+            - "work_mem=8MB"                     # Увеличили рабочую память
+            - "-c"
+            - "maintenance_work_mem=256MB"       # Память для обслуживания
             - "-c"
             - "random_page_cost=1.1"
             - "-c"
             - "checkpoint_completion_target=0.9"
             - "-c"
-            - "wal_buffers=16MB"
+            - "wal_buffers=32MB"                 # Увеличили WAL буферы
+            - "-c"
+            - "max_wal_size=2GB"                 # Увеличили размер WAL
+            - "-c"
+            - "min_wal_size=1GB"
+            - "-c"
+            - "checkpoint_timeout=15min"
+            - "-c"
+            - "log_min_duration_statement=1000"  # Логируем медленные запросы
+            - "-c"
+            - "log_connections=on"
+            - "-c"
+            - "log_disconnections=on"
+          livenessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - pg_isready -U $POSTGRES_USER -d $POSTGRES_DB
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - pg_isready -U $POSTGRES_USER -d $POSTGRES_DB
+            initialDelaySeconds: 5
+            periodSeconds: 5
 ---
 apiVersion: v1
 kind: Service

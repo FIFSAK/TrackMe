@@ -65,6 +65,7 @@ jobs:
           cp k8s/api-service.yaml ./out/
           cp k8s/api-hpa.yaml ./out/
           cp k8s/infrastructure.yaml ./out/
+          cp k8s/pgbouncer.yaml ./out/
           echo "Generated manifest:"
           cat ./out/api-deployment.yaml
 
@@ -116,6 +117,8 @@ jobs:
             sudo kubectl apply -f out/api-deployment.yaml
             sudo kubectl apply -f out/api-service.yaml
             sudo kubectl apply -f out/api-hpa.yaml
+            sudo kubectl apply -f out/pgbouncer.yaml
+            
 
             # 7. Перезагружаем поды, чтобы они увидели новые конфиги
             sudo kubectl rollout restart deployment prometheus

@@ -3,7 +3,12 @@ kind: Deployment
 metadata:
   name: trackme-app
 spec:
-  replicas: 1
+  replicas: 3  # Начинаем с 3 реплик
+  strategy:
+    type: RollingUpdate  # Возвращаем RollingUpdate для плавного масштабирования
+    rollingUpdate:
+      maxSurge: 2        # Можем добавить до 2 дополнительных подов
+      maxUnavailable: 1   # Максимум 1 под может быть недоступен
   selector:
     matchLabels:
       app: trackme-app
@@ -12,18 +17,95 @@ spec:
       labels:
         app: trackme-app
     spec:
-      containers:
-        - name: trackme-app
-          image: ${DOCKER_USERNAME}/trackme-app:latest # Переменная для envsubst
+      initContainers:
+        - name: wait-for-pgbouncer
+          image: postgres:15-alpine
+          command: ['sh', '-c']
+          args:
+            - |
+              echo "Waiting for PgBouncer to be ready..."
+              until pg_isready -h pgbouncer -p 5432; do
+                echo "PgBouncer is not ready yet, waiting..."
+                sleep 3
+              done
+              echo "PgBouncer is ready!"
+        - name: wait-for-redis
+          image: redis:latest
+          command: ['sh', '-c']
+          args:
+            - |
+              until redis-cli -h redis -p 6379 -a $REDIS_PASSWORD ping; do
+                echo "Waiting for Redis..."
+                sleep 3
+              done
+              echo "Redis is ready!"
           envFrom:
             - secretRef:
-                name: trackme-env # ОБЯЗАТЕЛЬНО для связи с БД
+                name: trackme-env
+      containers:
+        - name: trackme-app
+          image: ${DOCKER_USERNAME}/trackme-app:latest
+          envFrom:
+            - secretRef:
+                name: trackme-env
+          env:
+            # Переопределяем DSN для использования PgBouncer
+            - name: POSTGRES_DSN
+              value: "postgres://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@pgbouncer:5432/$(POSTGRES_DB)?sslmode=disable"
+            - name: DB_MAX_CONNS
+              value: "10"      # Увеличиваем, так как теперь идем через PgBouncer
+            - name: DB_MIN_CONNS
+              value: "2"
+            - name: GOMAXPROCS
+              valueFrom:
+                resourceFieldRef:
+                  resource: limits.cpu
           ports:
-            - containerPort: 80
+            - name: http
+              containerPort: 80
+              protocol: TCP
+            - name: metrics
+              containerPort: 9090   # Порт для метрик Prometheus
+              protocol: TCP
           resources:
             requests:
-              cpu: "300m"
-              memory: "256Mi"
+              cpu: "200m"
+              memory: "128Mi"
             limits:
-              cpu: "1000m"
-              memory: "1024Mi"
+              cpu: "500m"
+              memory: "512Mi"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+            successThreshold: 1
+            failureThreshold: 3
+          lifecycle:
+            preStop:
+              exec:
+                command: ["/bin/sh", "-c", "sleep 15"]
+      terminationGracePeriodSeconds: 30
+      restartPolicy: Always
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - trackme-app
+              topologyKey: kubernetes.io/hostname
