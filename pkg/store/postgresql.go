@@ -21,7 +21,11 @@ func NewPostgres(dsn string) (PostgreSQL, error) {
 		return pg, err
 	}
 
-	cfg.MaxConns = 100
+	cfg.MaxConns = 50
+	cfg.MinConns = 5
+	cfg.MaxConnLifetime = 5 * 60
+	cfg.MaxConnIdleTime = 30
+	cfg.HealthCheckPeriod = 60
 
 	pool, err := pgxpool.NewWithConfig(ctx, cfg)
 	if err != nil {

@@ -50,10 +50,27 @@ class TrackMeUser(HttpUser):
         self.client_ids = []
         self.email = f"user_{uuid.uuid4().hex[:8]}@test.com"
         self.password = "TestPass123!"
+
+        # Проверяем доступность сервера
+        logger.info(f"Initializing user: {self.email}")
+        try:
+            # Простой health check
+            health_response = self.client.get("/", catch_response=True)
+            logger.info(f"Server health check: {health_response.status_code}")
+        except Exception as e:
+            logger.error(f"Server health check failed: {e}")
+
         self.register_and_login()
+
+        if self.token:
+            logger.info(f"User {self.email} successfully initialized with token")
+        else:
+            logger.error(f"User {self.email} failed to get token during initialization")
 
     def register_and_login(self):
         """Регистрация нового пользователя и получение токена"""
+        logger.info(f"Starting registration for {self.email}")
+
         # Пытаемся зарегистрироваться
         register_payload = {
             "email": self.email,
@@ -62,64 +79,101 @@ class TrackMeUser(HttpUser):
             "role": "user"
         }
 
-        with self.client.post(
-                "/api/v1/auth/register",
-                json=register_payload,
-                catch_response=True,
-                name="/auth/register"
-        ) as response:
-            if response.status_code == 201:
-                try:
-                    data = response.json()
-                    # API возвращает данные в обёртке {"data": {...}}
-                    response_data = data.get("data", {})
-                    self.token = response_data.get("token")
-                    self.user_id = response_data.get("user", {}).get("id")
-                    if self.token:
-                        response.success()
-                    else:
-                        response.failure(f"No token in response: {data}")
-                except Exception as e:
-                    response.failure(f"Failed to parse response: {e}")
-            elif response.status_code == 409:
-                # Пользователь уже существует, пробуем залогиниться
-                response.success()
-                self.login(self.email, self.password)
-            elif response.status_code == 0:
-                response.failure("Connection refused - server not running?")
-            else:
-                response.failure(f"Registration failed: {response.status_code} - {response.text[:200]}")
+        try:
+            with self.client.post(
+                    "/api/v1/auth/register",
+                    json=register_payload,
+                    catch_response=True,
+                    name="/auth/register",
+                    timeout=10
+            ) as response:
+                logger.info(f"Registration response: {response.status_code}")
+
+                if response.status_code == 201:
+                    try:
+                        data = response.json()
+                        logger.info(f"Registration response data: {data}")
+                        # API возвращает данные в обёртке {"data": {...}}
+                        response_data = data.get("data", {})
+                        self.token = response_data.get("token")
+                        self.user_id = response_data.get("user", {}).get("id")
+                        if self.token:
+                            logger.info(f"Successfully registered and got token for {self.email}")
+                            response.success()
+                        else:
+                            logger.error(f"No token in response: {data}")
+                            response.failure(f"No token in response: {data}")
+                    except Exception as e:
+                        logger.error(f"Failed to parse registration response: {e}")
+                        response.failure(f"Failed to parse response: {e}")
+                elif response.status_code == 409:
+                    # Пользователь уже существует, пробуем залогиниться
+                    logger.info(f"User {self.email} already exists, trying to login")
+                    response.success()
+                    self.login(self.email, self.password)
+                elif response.status_code == 0:
+                    logger.error("Connection refused - server not running?")
+                    response.failure("Connection refused - server not running?")
+                elif response.status_code == 500:
+                    logger.error(f"Server error during registration: {response.text[:200]}")
+                    # Пробуем логин, возможно пользователь уже существует
+                    self.login(self.email, self.password)
+                    response.failure(f"Registration failed with server error: {response.status_code}")
+                else:
+                    logger.error(f"Registration failed: {response.status_code} - {response.text[:200]}")
+                    response.failure(f"Registration failed: {response.status_code} - {response.text[:200]}")
+        except Exception as e:
+            logger.error(f"Exception during registration: {e}")
+            # Пробуем логин как fallback
+            self.login(self.email, self.password)
 
     def login(self, email, password):
         """Логин существующего пользователя"""
+        logger.info(f"Attempting login for {email}")
+
         login_payload = {
             "email": email,
             "password": password
         }
 
-        with self.client.post(
-                "/api/v1/auth/login",
-                json=login_payload,
-                catch_response=True,
-                name="/auth/login"
-        ) as response:
-            if response.status_code == 200:
-                try:
-                    data = response.json()
-                    # API возвращает данные в обёртке {"data": {...}}
-                    response_data = data.get("data", {})
-                    self.token = response_data.get("token")
-                    self.user_id = response_data.get("user", {}).get("id")
-                    if self.token:
-                        response.success()
-                    else:
-                        response.failure(f"No token in login response: {data}")
-                except Exception as e:
-                    response.failure(f"Failed to parse login response: {e}")
-            elif response.status_code == 0:
-                response.failure("Connection refused - server not running?")
-            else:
-                response.failure(f"Login failed: {response.status_code} - {response.text[:200]}")
+        try:
+            with self.client.post(
+                    "/api/v1/auth/login",
+                    json=login_payload,
+                    catch_response=True,
+                    name="/auth/login",
+                    timeout=10
+            ) as response:
+                logger.info(f"Login response: {response.status_code}")
+
+                if response.status_code == 200:
+                    try:
+                        data = response.json()
+                        logger.info(f"Login response data: {data}")
+                        # API возвращает данные в обёртке {"data": {...}}
+                        response_data = data.get("data", {})
+                        self.token = response_data.get("token")
+                        self.user_id = response_data.get("user", {}).get("id")
+                        if self.token:
+                            logger.info(f"Successfully logged in and got token for {email}")
+                            response.success()
+                        else:
+                            logger.error(f"No token in login response: {data}")
+                            response.failure(f"No token in login response: {data}")
+                    except Exception as e:
+                        logger.error(f"Failed to parse login response: {e}")
+                        response.failure(f"Failed to parse login response: {e}")
+                elif response.status_code == 0:
+                    logger.error("Connection refused during login - server not running?")
+                    response.failure("Connection refused - server not running?")
+                elif response.status_code == 401:
+                    logger.error(f"Invalid credentials for {email}")
+                    response.failure(f"Invalid credentials: {response.text[:200]}")
+                else:
+                    logger.error(f"Login failed: {response.status_code} - {response.text[:200]}")
+                    response.failure(f"Login failed: {response.status_code} - {response.text[:200]}")
+        except Exception as e:
+            logger.error(f"Exception during login: {e}")
 
     def get_auth_headers(self):
         """Получение заголовков с токеном авторизации"""
@@ -131,8 +185,12 @@ class TrackMeUser(HttpUser):
     def list_clients(self):
         """Получение списка клиентов с различными фильтрами"""
         if not self.token:
-            logger.warning("list_clients skipped - no token available")
-            return
+            logger.warning(f"list_clients skipped - no token available for {self.email}")
+            # Попробуем повторно авторизоваться
+            self.register_and_login()
+            if not self.token:
+                logger.error(f"Still no token after re-auth attempt for {self.email}")
+                return
 
         filters = [
             {},
