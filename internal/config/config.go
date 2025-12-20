@@ -37,14 +37,6 @@ type (
 		DSN string
 	}
 
-	func (p *POSTGRES) GetDSN() string {
-		// Проверяем, не переопределен ли DSN через переменную окружения
-		if envDSN := os.Getenv("POSTGRES_DSN"); envDSN != "" {
-			return envDSN
-		}
-		return p.DSN
-	}
-
 	ClickhouseConfig struct {
 		ADDR     string
 		UserName string
