@@ -41,10 +41,10 @@ jobs:
     name: Deploy to K3s
     runs-on: ubuntu-latest
     needs: build
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master || github.ref == 'refs/heads/after_inc_limits'
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3 # <--- КРИТИЧЕСКИ ВАЖНО
+        uses: actions/checkout@v3
 
       - name: Debug - List files
         run: |
