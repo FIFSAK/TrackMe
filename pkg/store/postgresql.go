@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -20,12 +21,11 @@ func NewPostgres(dsn string) (PostgreSQL, error) {
 		return pg, err
 	}
 
-	cfg.MaxConns = 5             // Максимум 5 подключений на инстанс
-	cfg.MinConns = 1             // Минимум 1 подключение
-	cfg.MaxConnLifetime = 3 * 60 // 3 минуты время жизни
-	cfg.MaxConnIdleTime = 15     // 15 секунд максимальное время простоя
-	cfg.HealthCheckPeriod = 30   // Проверка каждые 30 секунд
-	cfg.MaxConnIdleTime = 60     // 60 секунд максимальное время простоя
+	cfg.MaxConns = 50
+	cfg.MinConns = 5
+	cfg.MaxConnLifetime = 5 * 60
+	cfg.MaxConnIdleTime = 30
+	cfg.HealthCheckPeriod = 60
 
 	pool, err := pgxpool.NewWithConfig(ctx, cfg)
 	if err != nil {
