@@ -39,7 +39,7 @@ spec:
           command:
             - "postgres"
             - "-c"
-            - "max_connections=500"
+            - "max_connections=700"
             - "-c"
             - "shared_buffers=256MB"
             - "-c"
