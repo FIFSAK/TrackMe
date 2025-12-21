@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: trackme-app
-          image: ${DOCKER_USERNAME}/trackme-app:latest # Переменная для envsubst
+          image: ${DOCKER_USERNAME}/trackme-app:${IMAGE_TAG}
           envFrom:
             - secretRef:
                 name: trackme-env # ОБЯЗАТЕЛЬНО для связи с БД

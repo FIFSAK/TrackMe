@@ -37,6 +37,12 @@ jobs:
           DOCKER_USERNAME=${{ secrets.DOCKER_USERNAME }} docker-compose build
           DOCKER_USERNAME=${{ secrets.DOCKER_USERNAME }} docker-compose push
 
+      - name: Tag and push image with commit SHA
+        run: |
+          IMAGE_TAG=${{ github.sha }}
+          docker tag ${DOCKER_USERNAME}/trackme-app:latest ${DOCKER_USERNAME}/trackme-app:${IMAGE_TAG}
+          docker push ${DOCKER_USERNAME}/trackme-app:${IMAGE_TAG}
+
   deploy:
     name: Deploy to K3s
     runs-on: ubuntu-latest
@@ -60,12 +66,17 @@ jobs:
           export DOCKER_USERNAME=${{ secrets.DOCKER_USERNAME }}
           mkdir -p ./out
           # Используем именно те имена, которые у тебя в dir
-          envsubst '${IMAGE_TAG} ${DOCKER_USERNAME}' < k8s/api-deployment.yaml > ./out/api-deployment.yaml
+          envsubst '${DOCKER_USERNAME} ${IMAGE_TAG}' < k8s/api-deployment.yaml > ./out/api-deployment.yaml
           cp k8s/api-service.yaml ./out/
           cp k8s/api-hpa.yaml ./out/
           cp k8s/infrastructure.yaml ./out/
           echo "Generated manifest:"
           cat ./out/api-deployment.yaml
+
+      - name: Create deploy .env
+        run: |
+          mkdir -p deploy
+          echo "${{ secrets.ENV_FILE }}" > deploy/.env
 
       - name: Copy files to server
         uses: appleboy/scp-action@master
@@ -73,7 +84,7 @@ jobs:
           host: ${{ secrets.HOST }}
           username: ${{ secrets.USERNAME }}
           key: ${{ secrets.SSH_KEY }}
-          source: "out/*,prometheus.yml,prometheus_alerts.yml,grafana/"
+          source: "out/*,prometheus.yml,prometheus_alerts.yml,grafana/,deploy/.env"
           target: "/trackme/"
           strip_components: 0
 
@@ -119,3 +130,4 @@ jobs:
             # 7. Перезагружаем поды, чтобы они увидели новые конфиги
             sudo kubectl rollout restart deployment prometheus
             sudo kubectl rollout restart deployment grafana
+
