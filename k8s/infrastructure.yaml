@@ -12,6 +12,11 @@ spec:
       labels:
         app: postgres
     spec:
+      # ИСПРАВЛЕНИЕ: добавляем securityContext для запуска от непривилегированного пользователя
+      securityContext:
+        runAsUser: 999
+        runAsGroup: 999
+        fsGroup: 999
       containers:
         - name: postgres
           image: postgres:15-alpine
@@ -31,8 +36,8 @@ spec:
             - containerPort: 5432
           resources:
             requests:
-                cpu: "500m"
-                memory: "512Mi"
+              cpu: "500m"
+              memory: "512Mi"
             limits:
               memory: "2Gi"
               cpu: "4"
@@ -52,6 +57,30 @@ spec:
             - "checkpoint_completion_target=0.9"
             - "-c"
             - "wal_buffers=16MB"
+          # ИСПРАВЛЕНИЕ: добавляем проверки готовности
+          livenessProbe:
+            exec:
+              command:
+                - pg_isready
+                - -U
+                - postgres
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            exec:
+              command:
+                - pg_isready
+                - -U
+                - postgres
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          # ИСПРАВЛЕНИЕ: добавляем persistent volume для данных
+          volumeMounts:
+            - name: postgres-data
+              mountPath: /var/lib/postgresql/data
+      volumes:
+        - name: postgres-data
+          emptyDir: {}
 ---
 apiVersion: v1
 kind: Service
@@ -86,6 +115,20 @@ spec:
           command: ["sh", "-c", "redis-server --requirepass \"$REDIS_PASSWORD\""]
           ports:
             - containerPort: 6379
+          livenessProbe:
+            exec:
+              command:
+                - redis-cli
+                - ping
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            exec:
+              command:
+                - redis-cli
+                - ping
+            initialDelaySeconds: 5
+            periodSeconds: 5
 ---
 apiVersion: v1
 kind: Service
@@ -103,6 +146,9 @@ kind: Deployment
 metadata:
   name: clickhouse
 spec:
+  # ИСПРАВЛЕНИЕ: добавляем стратегию обновления
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: clickhouse
@@ -127,6 +173,25 @@ spec:
             limits:
               memory: "2Gi"
               cpu: "4"
+          # ИСПРАВЛЕНИЕ: добавляем проверки готовности
+          livenessProbe:
+            httpGet:
+              path: /ping
+              port: 8123
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /ping
+              port: 8123
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          volumeMounts:
+            - name: clickhouse-data
+              mountPath: /var/lib/clickhouse
+      volumes:
+        - name: clickhouse-data
+          emptyDir: {}
 ---
 apiVersion: v1
 kind: Service
@@ -167,6 +232,13 @@ spec:
           volumeMounts:
             - name: config-volume
               mountPath: /etc/prometheus/
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "500m"
+            limits:
+              memory: "1Gi"
+              cpu: "1"
       volumes:
         - name: config-volume
           configMap:
@@ -201,6 +273,8 @@ spec:
       containers:
         - name: grafana
           image: grafana/grafana:latest
+          ports:
+            - containerPort: 3000
           volumeMounts:
             - name: ds-vol
               mountPath: /etc/grafana/provisioning/datasources/
@@ -208,6 +282,13 @@ spec:
               mountPath: /etc/grafana/provisioning/dashboards/
             - name: json-vol
               mountPath: /etc/grafana/provisioning/dashboards/json/
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
       volumes:
         - name: ds-vol
           configMap:
@@ -230,4 +311,3 @@ spec:
   ports:
     - port: 3000
       targetPort: 3000
-
