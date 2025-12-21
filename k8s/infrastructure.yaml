@@ -40,24 +40,9 @@ spec:
           env:
             - name: PGDATA
               value: "/var/lib/postgresql/data/pgdata"
-            - name: POSTGRES_MAX_CONNECTIONS
-              value: "500"
-            - name: POSTGRES_SHARED_BUFFERS
-              value: "256MB"
-            - name: POSTGRES_EFFECTIVE_CACHE_SIZE
-              value: "1GB"
-            - name: POSTGRES_WORK_MEM
-              value: "4MB"
           ports:
             - containerPort: 5432
-          resources:
-            requests:
-              cpu: "250m"
-              memory: "256Mi"
-            limits:
-              memory: "1Gi"
-              cpu: "2"
-          command:
+          args:
             - "postgres"
             - "-c"
             - "max_connections=700"
