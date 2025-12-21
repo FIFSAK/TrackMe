@@ -14,6 +14,13 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
+      - name: Validate Docker credentials
+        run: |
+          if [ -z "${{ secrets.DOCKER_USERNAME }}" ] || [ -z "${{ secrets.DOCKER_PASSWORD }}" ]; then
+            echo "ERROR: DOCKER_USERNAME and DOCKER_PASSWORD secrets must be set in repository settings.\nSet secrets.DOCKER_USERNAME to your Docker Hub username (org) and DOCKER_PASSWORD to an access token/password." >&2
+            exit 1
+          fi
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
 
@@ -37,12 +44,6 @@ jobs:
           DOCKER_USERNAME=${{ secrets.DOCKER_USERNAME }} docker-compose build
           DOCKER_USERNAME=${{ secrets.DOCKER_USERNAME }} docker-compose push
 
-      - name: Tag and push image with commit SHA
-        run: |
-          IMAGE_TAG=${{ github.sha }}
-          docker tag ${DOCKER_USERNAME}/trackme-app:latest ${DOCKER_USERNAME}/trackme-app:${IMAGE_TAG}
-          docker push ${DOCKER_USERNAME}/trackme-app:${IMAGE_TAG}
-
   deploy:
     name: Deploy to K3s
     runs-on: ubuntu-latest
@@ -62,16 +63,15 @@ jobs:
 
       - name: Replace variables in manifests
         run: |
-          export IMAGE_TAG=${{ github.sha }}
-          export DOCKER_USERNAME=${{ secrets.DOCKER_USERNAME }}
-          mkdir -p ./out
-          # Используем именно те имена, которые у тебя в dir
-          envsubst '${DOCKER_USERNAME} ${IMAGE_TAG}' < k8s/api-deployment.yaml > ./out/api-deployment.yaml
-          cp k8s/api-service.yaml ./out/
-          cp k8s/api-hpa.yaml ./out/
-          cp k8s/infrastructure.yaml ./out/
-          echo "Generated manifest:"
-          cat ./out/api-deployment.yaml
+           export DOCKER_USERNAME=${{ secrets.DOCKER_USERNAME }}
+           mkdir -p ./out
+           # Используем именно те имена, которые у тебя в dir
+           envsubst '${DOCKER_USERNAME}' < k8s/api-deployment.yaml > ./out/api-deployment.yaml
+           cp k8s/api-service.yaml ./out/
+           cp k8s/api-hpa.yaml ./out/
+           cp k8s/infrastructure.yaml ./out/
+           echo "Generated manifest:"
+           cat ./out/api-deployment.yaml
 
       - name: Create deploy .env
         run: |
