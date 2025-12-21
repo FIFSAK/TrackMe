@@ -120,6 +120,13 @@ jobs:
             sudo kubectl create configmap grafana-dashboard-json \
               --from-file=grafana/provisioning/dashboards/json/ \
               --dry-run=client -o yaml | sudo kubectl apply -f -
+            
+            sudo kubectl delete deployment postgres --ignore-not-found=true
+            sudo kubectl delete deployment clickhouse --ignore-not-found=true
+            sudo kubectl delete deployment prometheus --ignore-not-found=true
+            sudo kubectl delete deployment grafana --ignore-not-found=true
+
+            sleep 10
 
             # 6. Применяем манифесты (теперь из папки out)
             sudo kubectl apply -f out/infrastructure.yaml
