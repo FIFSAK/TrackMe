@@ -12,7 +12,6 @@ spec:
       labels:
         app: postgres
     spec:
-      # ИСПРАВЛЕНИЕ: добавляем securityContext для запуска от непривилегированного пользователя
       securityContext:
         runAsUser: 999
         runAsGroup: 999
@@ -24,6 +23,8 @@ spec:
             - secretRef:
                 name: trackme-env
           env:
+            - name: PGDATA
+              value: "/var/lib/postgresql/data/pgdata"
             - name: POSTGRES_MAX_CONNECTIONS
               value: "500"
             - name: POSTGRES_SHARED_BUFFERS
@@ -57,7 +58,6 @@ spec:
             - "checkpoint_completion_target=0.9"
             - "-c"
             - "wal_buffers=16MB"
-          # ИСПРАВЛЕНИЕ: добавляем проверки готовности
           livenessProbe:
             exec:
               command:
@@ -66,6 +66,8 @@ spec:
                 - postgres
             initialDelaySeconds: 30
             periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
           readinessProbe:
             exec:
               command:
@@ -74,7 +76,8 @@ spec:
                 - postgres
             initialDelaySeconds: 5
             periodSeconds: 5
-          # ИСПРАВЛЕНИЕ: добавляем persistent volume для данных
+            timeoutSeconds: 3
+            failureThreshold: 3
           volumeMounts:
             - name: postgres-data
               mountPath: /var/lib/postgresql/data
@@ -91,6 +94,8 @@ spec:
     app: postgres
   ports:
     - port: 5432
+      targetPort: 5432
+  type: ClusterIP
 ---
 # --- REDIS ---
 apiVersion: apps/v1
@@ -108,13 +113,20 @@ spec:
     spec:
       containers:
         - name: redis
-          image: redis:latest
+          image: redis:7-alpine
           envFrom:
             - secretRef:
                 name: trackme-env
           command: ["sh", "-c", "redis-server --requirepass \"$REDIS_PASSWORD\""]
           ports:
             - containerPort: 6379
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "256Mi"
+            limits:
+              memory: "512Mi"
+              cpu: "1"
           livenessProbe:
             exec:
               command:
@@ -122,6 +134,7 @@ spec:
                 - ping
             initialDelaySeconds: 30
             periodSeconds: 10
+            timeoutSeconds: 5
           readinessProbe:
             exec:
               command:
@@ -129,6 +142,13 @@ spec:
                 - ping
             initialDelaySeconds: 5
             periodSeconds: 5
+            timeoutSeconds: 3
+          volumeMounts:
+            - name: redis-data
+              mountPath: /data
+      volumes:
+        - name: redis-data
+          emptyDir: {}
 ---
 apiVersion: v1
 kind: Service
@@ -139,6 +159,8 @@ spec:
     app: redis
   ports:
     - port: 6379
+      targetPort: 6379
+  type: ClusterIP
 ---
 # --- CLICKHOUSE ---
 apiVersion: apps/v1
@@ -146,7 +168,6 @@ kind: Deployment
 metadata:
   name: clickhouse
 spec:
-  # ИСПРАВЛЕНИЕ: добавляем стратегию обновления
   strategy:
     type: Recreate
   selector:
@@ -165,7 +186,9 @@ spec:
                 name: trackme-env
           ports:
             - containerPort: 8123
+              name: http
             - containerPort: 9000
+              name: native
           resources:
             requests:
               memory: "1Gi"
@@ -173,19 +196,22 @@ spec:
             limits:
               memory: "2Gi"
               cpu: "4"
-          # ИСПРАВЛЕНИЕ: добавляем проверки готовности
           livenessProbe:
             httpGet:
               path: /ping
               port: 8123
             initialDelaySeconds: 30
             periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
           readinessProbe:
             httpGet:
               path: /ping
               port: 8123
-            initialDelaySeconds: 5
+            initialDelaySeconds: 10
             periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
           volumeMounts:
             - name: clickhouse-data
               mountPath: /var/lib/clickhouse
@@ -203,8 +229,11 @@ spec:
   ports:
     - name: http
       port: 8123
+      targetPort: 8123
     - name: native
       port: 9000
+      targetPort: 9000
+  type: ClusterIP
 ---
 
 # --- PROMETHEUS ---
@@ -232,6 +261,8 @@ spec:
           volumeMounts:
             - name: config-volume
               mountPath: /etc/prometheus/
+            - name: prometheus-data
+              mountPath: /prometheus
           resources:
             requests:
               memory: "512Mi"
@@ -239,10 +270,24 @@ spec:
             limits:
               memory: "1Gi"
               cpu: "1"
+          livenessProbe:
+            httpGet:
+              path: /-/healthy
+              port: 9090
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /-/ready
+              port: 9090
+            initialDelaySeconds: 5
+            periodSeconds: 5
       volumes:
         - name: config-volume
           configMap:
             name: prometheus-config
+        - name: prometheus-data
+          emptyDir: {}
 ---
 apiVersion: v1
 kind: Service
@@ -282,6 +327,8 @@ spec:
               mountPath: /etc/grafana/provisioning/dashboards/
             - name: json-vol
               mountPath: /etc/grafana/provisioning/dashboards/json/
+            - name: grafana-data
+              mountPath: /var/lib/grafana
           resources:
             requests:
               memory: "256Mi"
@@ -289,6 +336,18 @@ spec:
             limits:
               memory: "512Mi"
               cpu: "500m"
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: 3000
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 5
       volumes:
         - name: ds-vol
           configMap:
@@ -299,6 +358,8 @@ spec:
         - name: json-vol
           configMap:
             name: grafana-dashboard-json
+        - name: grafana-data
+          emptyDir: {}
 ---
 apiVersion: v1
 kind: Service
