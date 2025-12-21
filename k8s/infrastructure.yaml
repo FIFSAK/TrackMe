@@ -45,28 +45,19 @@ spec:
           args:
             - "postgres"
             - "-c"
-            - "max_connections=1000"
+            - "max_connections=700"
             - "-c"
-            - "shared_buffers=4GB"
+            - "shared_buffers=256MB"
             - "-c"
-            - "effective_cache_size=12GB"
+            - "effective_cache_size=1GB"
             - "-c"
-            - "work_mem=16MB"
-            - "-c"
-            - "maintenance_work_mem=512MB"
+            - "work_mem=4MB"
             - "-c"
             - "random_page_cost=1.1"
             - "-c"
             - "checkpoint_completion_target=0.9"
             - "-c"
             - "wal_buffers=16MB"
-          resources:
-            requests:
-              cpu: "1"
-              memory: "2Gi"
-            limits:
-              cpu: "2"                     
-              memory: "6Gi"
           livenessProbe:
             exec:
               command:
